@@ -5,6 +5,7 @@ import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { ConversationSidebar } from "./ConversationSidebar";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -19,6 +20,7 @@ export function ChatContainer() {
     selectConversation,
     startNewConversation,
     deleteConversation,
+    renameConversation,
   } = useChat();
   
   const { user, signOut } = useAuth();
@@ -51,6 +53,7 @@ export function ChatContainer() {
           setSidebarOpen(false);
         }}
         onDelete={deleteConversation}
+        onRename={renameConversation}
       />
 
       {/* Main Chat Area */}
@@ -70,13 +73,13 @@ export function ChatContainer() {
               <Sparkles className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-semibold text-foreground">Lumy</h1>
+              <h1 className="font-semibold text-foreground">Tiffy</h1>
               <p className="text-xs text-muted-foreground truncate max-w-[150px]">
                 {user?.email}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Button
               variant="outline"
               size="sm"
@@ -86,6 +89,7 @@ export function ChatContainer() {
               <Plus className="h-4 w-4 mr-1" />
               Nouvelle
             </Button>
+            <ThemeToggle />
             <Button
               variant="ghost"
               size="icon"
@@ -107,7 +111,7 @@ export function ChatContainer() {
                   <Sparkles className="h-10 w-10 text-primary-foreground" />
                 </div>
                 <h2 className="text-2xl font-semibold gradient-text mb-2">
-                  Salut ! Je suis Lumy 👋
+                  Salut ! Je suis Tiffy 👋
                 </h2>
                 <p className="text-muted-foreground max-w-sm">
                   Pose-moi n'importe quelle question, je suis là pour t'aider !

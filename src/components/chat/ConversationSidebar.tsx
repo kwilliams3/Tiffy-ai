@@ -1,5 +1,7 @@
-import { MessageSquare, Plus, Trash2, X } from "lucide-react";
+import { useState } from "react";
+import { MessageSquare, Plus, Trash2, X, Pencil, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { Conversation } from "@/hooks/useChat";
 import { formatDistanceToNow } from "date-fns";
@@ -14,6 +16,7 @@ interface ConversationSidebarProps {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onRename: (id: string, newTitle: string) => void;
 }
 
 export function ConversationSidebar({
@@ -25,7 +28,30 @@ export function ConversationSidebar({
   onSelect,
   onNew,
   onDelete,
+  onRename,
 }: ConversationSidebarProps) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+
+  const startEditing = (conv: Conversation, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(conv.id);
+    setEditTitle(conv.title);
+  };
+
+  const saveEdit = (id: string) => {
+    if (editTitle.trim()) {
+      onRename(id, editTitle.trim());
+    }
+    setEditingId(null);
+    setEditTitle("");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditTitle("");
+  };
+
   return (
     <>
       {/* Overlay for mobile */}
@@ -87,29 +113,70 @@ export function ConversationSidebar({
                     ? "bg-primary/10 text-primary"
                     : "hover:bg-muted"
                 )}
-                onClick={() => onSelect(conv.id)}
+                onClick={() => editingId !== conv.id && onSelect(conv.id)}
               >
                 <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{conv.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(conv.updated_at), {
-                      addSuffix: true,
-                      locale: fr,
-                    })}
-                  </p>
+                  {editingId === conv.id ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveEdit(conv.id);
+                          if (e.key === "Escape") cancelEdit();
+                        }}
+                        className="h-7 text-sm"
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          saveEdit(conv.id);
+                        }}
+                      >
+                        <Check className="h-3 w-3 text-primary" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium truncate">{conv.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(conv.updated_at), {
+                          addSuffix: true,
+                          locale: fr,
+                        })}
+                      </p>
+                    </>
+                  )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(conv.id);
-                  }}
-                >
-                  <Trash2 className="h-3 w-3 text-destructive" />
-                </Button>
+                {editingId !== conv.id && (
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => startEditing(conv, e)}
+                    >
+                      <Pencil className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(conv.id);
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
+                  </div>
+                )}
               </div>
             ))
           )}
