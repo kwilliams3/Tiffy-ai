@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from "react";
-import { Sparkles, Menu, Plus, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Menu, Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
@@ -8,8 +9,10 @@ import { ConversationSidebar } from "./ConversationSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/hooks/useAuth";
+import tiffyLogo from "@/assets/tiffy-logo.png";
 
 export function ChatContainer() {
+  const navigate = useNavigate();
   const {
     messages,
     conversations,
@@ -30,10 +33,6 @@ export function ChatContainer() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
 
   return (
     <div className="flex h-screen chat-container">
@@ -69,9 +68,7 @@ export function ChatContainer() {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent ai-glow">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img src={tiffyLogo} alt="Tiffy" className="h-10 w-10 rounded-xl ai-glow" />
             <div>
               <h1 className="font-semibold text-foreground">Tiffy</h1>
               <p className="text-xs text-muted-foreground truncate max-w-[150px]">
@@ -93,11 +90,11 @@ export function ChatContainer() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleSignOut}
-              className="text-muted-foreground hover:text-destructive"
-              title="Se déconnecter"
+              onClick={() => navigate("/settings")}
+              className="text-muted-foreground hover:text-foreground"
+              title="Paramètres"
             >
-              <LogOut className="h-4 w-4" />
+              <Settings className="h-4 w-4" />
             </Button>
           </div>
         </header>
@@ -107,9 +104,7 @@ export function ChatContainer() {
           <div className="mx-auto max-w-2xl space-y-6">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
-                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent ai-glow">
-                  <Sparkles className="h-10 w-10 text-primary-foreground" />
-                </div>
+                <img src={tiffyLogo} alt="Tiffy" className="h-20 w-20 mb-6 ai-glow rounded-2xl" />
                 <h2 className="text-2xl font-semibold gradient-text mb-2">
                   Salut ! Je suis Tiffy 👋
                 </h2>
