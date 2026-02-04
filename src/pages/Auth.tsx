@@ -58,7 +58,7 @@ export default function Auth() {
           <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent ai-glow mb-4">
             <Sparkles className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold gradient-text">Lumy</h1>
+          <h1 className="text-2xl font-bold gradient-text">Tiffy</h1>
           <p className="text-muted-foreground mt-1">
             {isLogin ? "Content de te revoir !" : "Crée ton compte"}
           </p>

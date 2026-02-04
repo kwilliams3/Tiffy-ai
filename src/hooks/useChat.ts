@@ -26,7 +26,6 @@ export function useChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
 
-  // Load conversations when user changes
   useEffect(() => {
     if (user) {
       loadConversations();
@@ -294,6 +293,26 @@ export function useChat() {
     }
   }, [currentConversationId]);
 
+  const renameConversation = useCallback(async (conversationId: string, newTitle: string) => {
+    try {
+      const { error } = await supabase
+        .from("conversations")
+        .update({ title: newTitle })
+        .eq("id", conversationId);
+
+      if (error) throw error;
+
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, title: newTitle } : c))
+      );
+      
+      toast.success("Conversation renommée");
+    } catch (error) {
+      console.error("Error renaming conversation:", error);
+      toast.error("Erreur lors du renommage");
+    }
+  }, []);
+
   return {
     messages,
     conversations,
@@ -304,5 +323,6 @@ export function useChat() {
     selectConversation,
     startNewConversation,
     deleteConversation,
+    renameConversation,
   };
 }
