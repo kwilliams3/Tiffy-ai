@@ -1,11 +1,12 @@
 import { useRef, useEffect, useState } from "react";
-import { Sparkles, Menu, Plus } from "lucide-react";
+import { Sparkles, Menu, Plus, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { ConversationSidebar } from "./ConversationSidebar";
 import { useChat } from "@/hooks/useChat";
+import { useAuth } from "@/hooks/useAuth";
 
 export function ChatContainer() {
   const {
@@ -20,12 +21,17 @@ export function ChatContainer() {
     deleteConversation,
   } = useChat();
   
+  const { user, signOut } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <div className="flex h-screen chat-container">
@@ -65,18 +71,31 @@ export function ChatContainer() {
             </div>
             <div>
               <h1 className="font-semibold text-foreground">Lumy</h1>
-              <p className="text-xs text-muted-foreground">Ton assistant IA</p>
+              <p className="text-xs text-muted-foreground truncate max-w-[150px]">
+                {user?.email}
+              </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={startNewConversation}
-            className="hidden md:flex"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Nouvelle
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startNewConversation}
+              className="hidden md:flex"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Nouvelle
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSignOut}
+              className="text-muted-foreground hover:text-destructive"
+              title="Se déconnecter"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </header>
 
         {/* Messages */}

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./useAuth";
 
 export interface Message {
   id: string;
@@ -18,18 +19,27 @@ export interface Conversation {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 export function useChat() {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
 
-  // Load conversations on mount
+  // Load conversations when user changes
   useEffect(() => {
-    loadConversations();
-  }, []);
+    if (user) {
+      loadConversations();
+    } else {
+      setConversations([]);
+      setMessages([]);
+      setCurrentConversationId(null);
+    }
+  }, [user]);
 
   const loadConversations = async () => {
+    if (!user) return;
+    
     setIsLoadingConversations(true);
     try {
       const { data, error } = await supabase
@@ -71,15 +81,16 @@ export function useChat() {
   };
 
   const createConversation = async (firstMessage: string): Promise<string | null> => {
+    if (!user) return null;
+    
     try {
-      // Generate a title from the first message (truncate if needed)
       const title = firstMessage.length > 50 
         ? firstMessage.substring(0, 47) + "..." 
         : firstMessage;
 
       const { data, error } = await supabase
         .from("conversations")
-        .insert({ title, user_id: null })
+        .insert({ title, user_id: user.id })
         .select()
         .single();
 
@@ -109,7 +120,6 @@ export function useChat() {
 
       if (error) throw error;
 
-      // Update conversation's updated_at
       await supabase
         .from("conversations")
         .update({ updated_at: new Date().toISOString() })
@@ -122,20 +132,9 @@ export function useChat() {
     }
   };
 
-  const updateMessage = async (messageId: string, content: string) => {
-    try {
-      await supabase
-        .from("messages")
-        .update({ content })
-        .eq("id", messageId);
-    } catch (error) {
-      console.error("Error updating message:", error);
-    }
-  };
-
   const sendMessage = useCallback(
     async (content: string) => {
-      if (!content.trim() || isLoading) return;
+      if (!content.trim() || isLoading || !user) return;
 
       const userMessage: Message = {
         id: crypto.randomUUID(),
@@ -148,7 +147,6 @@ export function useChat() {
 
       let conversationId = currentConversationId;
       
-      // Create new conversation if none exists
       if (!conversationId) {
         conversationId = await createConversation(content.trim());
         if (!conversationId) {
@@ -157,7 +155,6 @@ export function useChat() {
         }
       }
 
-      // Save user message to database
       const savedUserMessageId = await saveMessage(conversationId, "user", content.trim());
       if (savedUserMessageId) {
         setMessages((prev) =>
@@ -232,8 +229,8 @@ export function useChat() {
 
             try {
               const parsed = JSON.parse(jsonStr);
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) updateAssistant(content);
+              const deltaContent = parsed.choices?.[0]?.delta?.content;
+              if (deltaContent) updateAssistant(deltaContent);
             } catch {
               buffer = line + "\n" + buffer;
               break;
@@ -241,7 +238,6 @@ export function useChat() {
           }
         }
 
-        // Save assistant message to database
         if (assistantContent && conversationId) {
           assistantMessageId = await saveMessage(conversationId, "assistant", assistantContent);
           if (assistantMessageId) {
@@ -253,7 +249,6 @@ export function useChat() {
               )
             );
           }
-          // Refresh conversations to update order
           loadConversations();
         }
       } catch (error) {
@@ -264,7 +259,7 @@ export function useChat() {
         setIsLoading(false);
       }
     },
-    [messages, isLoading, currentConversationId]
+    [messages, isLoading, currentConversationId, user]
   );
 
   const selectConversation = useCallback((conversationId: string) => {
