@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Mail, Lock, Loader2 } from "lucide-react";
+import { Mail, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
+import tiffyLogo from "@/assets/tiffy-logo.png";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -76,9 +77,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center chat-container px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent ai-glow mb-4">
-            <Sparkles className="h-8 w-8 text-primary-foreground" />
-          </div>
+          <img src={tiffyLogo} alt="Tiffy" className="h-20 w-20 mx-auto mb-4 ai-glow rounded-2xl" />
           <h1 className="text-2xl font-bold gradient-text">Tiffy</h1>
           <p className="text-muted-foreground mt-1">
             {isLogin ? "Content de te revoir !" : "Crée ton compte"}
