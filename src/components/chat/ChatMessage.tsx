@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Bot, User } from "lucide-react";
+import { Bot, User, Sparkles } from "lucide-react";
 import type { Message } from "@/hooks/useChat";
 
 interface ChatMessageProps {
@@ -12,27 +12,30 @@ export function ChatMessage({ message }: ChatMessageProps) {
   return (
     <div
       className={cn(
-        "flex gap-3 animate-slide-up",
+        "flex gap-4 animate-slide-up",
         isUser ? "flex-row-reverse" : "flex-row"
       )}
     >
       <div
         className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-md",
           isUser
-            ? "bg-primary text-primary-foreground"
+            ? "bg-gradient-to-br from-primary/80 to-primary text-primary-foreground"
             : "bg-gradient-to-br from-primary to-accent text-primary-foreground ai-glow"
         )}
       >
-        {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+        {isUser ? <User className="h-4.5 w-4.5" /> : <Sparkles className="h-4.5 w-4.5" />}
       </div>
       <div
         className={cn(
-          "max-w-[75%] whitespace-pre-wrap",
+          "max-w-[80%] whitespace-pre-wrap",
           isUser ? "message-bubble-user" : "message-bubble-ai"
         )}
       >
-        <p className="text-sm leading-relaxed">{message.content}</p>
+        <p className={cn(
+          "text-sm leading-relaxed",
+          isUser ? "text-primary-foreground" : "text-foreground"
+        )}>{message.content}</p>
       </div>
     </div>
   );
