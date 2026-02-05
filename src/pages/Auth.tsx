@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, Loader2 } from "lucide-react";
+import { Mail, Lock, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,22 +74,33 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center chat-container px-4">
+    <div className="min-h-screen flex items-center justify-center chat-container px-4 py-8">
+      {/* Decorative background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
+      </div>
+
       <div className="w-full max-w-md">
-        <div className="text-center mb-8 animate-fade-in">
-          <img src={tiffyLogo} alt="Tiffy" className="h-20 w-20 mx-auto mb-4 ai-glow rounded-2xl" />
-          <h1 className="text-2xl font-bold gradient-text">Tiffy</h1>
-          <p className="text-muted-foreground mt-1">
+        <div className="text-center mb-8 animate-fade-in relative">
+          <div className="relative inline-block">
+            <img src={tiffyLogo} alt="Tiffy" className="h-24 w-24 mx-auto mb-4 ai-glow rounded-3xl" />
+            <div className="absolute -top-1 -right-1 bg-gradient-to-br from-primary to-accent p-1.5 rounded-full">
+              <Sparkles className="h-4 w-4 text-primary-foreground" />
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold gradient-text tracking-tight">Tiffy</h1>
+          <p className="text-muted-foreground mt-2 text-lg">
             {isLogin ? "Content de te revoir !" : "Crée ton compte"}
           </p>
         </div>
 
-        <div className="bg-card rounded-2xl border border-border p-6 shadow-lg animate-slide-up">
+        <div className="card-elevated p-8 animate-slide-up">
           {/* Google Sign In Button */}
           <Button
             type="button"
             variant="outline"
-            className="w-full mb-4 h-11"
+            className="w-full mb-6 h-12 text-base font-medium hover:bg-muted/80 transition-all duration-200"
             onClick={handleGoogleSignIn}
             disabled={isGoogleLoading}
           >
@@ -118,43 +129,43 @@ export default function Auth() {
             Continuer avec Google
           </Button>
 
-          <div className="relative mb-4">
+          <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
+              <span className="w-full border-t border-border/60" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">ou</span>
+              <span className="bg-card px-4 text-muted-foreground font-medium">ou continue avec email</span>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-2.5">
+              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="ton@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
+                  className="pl-11 h-12 input-modern"
                   required
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
+            <div className="space-y-2.5">
+              <Label htmlFor="password" className="text-sm font-medium">Mot de passe</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
+                  className="pl-11 h-12 input-modern"
                   minLength={6}
                   required
                 />
@@ -163,7 +174,7 @@ export default function Auth() {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
+              className="w-full h-12 text-base font-semibold btn-primary-gradient"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -176,11 +187,11 @@ export default function Auth() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-8 text-center">
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors duration-200 font-medium"
             >
               {isLogin
                 ? "Pas encore de compte ? Inscris-toi"
@@ -188,6 +199,10 @@ export default function Auth() {
             </button>
           </div>
         </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          En continuant, tu acceptes nos conditions d'utilisation
+        </p>
       </div>
     </div>
   );
