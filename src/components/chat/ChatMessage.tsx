@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-import { Bot, User, Sparkles } from "lucide-react";
-import type { Message } from "@/hooks/useChat";
+import { User, Sparkles } from "lucide-react";
+import type { Message } from "@/hooks/useLocalChat";
 
 interface ChatMessageProps {
   message: Message;
