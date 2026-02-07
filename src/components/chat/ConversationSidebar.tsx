@@ -3,8 +3,14 @@ import { MessageSquare, Plus, Trash2, X, Pencil, Check, Sparkles } from "lucide-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { Conversation } from "@/hooks/useChat";
 import { formatDistanceToNow } from "date-fns";
+
+interface Conversation {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
 import { fr } from "date-fns/locale";
 import tiffyLogo from "@/assets/tiffy-logo.png";
 

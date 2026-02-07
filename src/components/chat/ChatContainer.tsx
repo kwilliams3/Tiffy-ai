@@ -7,8 +7,7 @@ import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { ConversationSidebar } from "./ConversationSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useChat } from "@/hooks/useChat";
-import { useAuth } from "@/hooks/useAuth";
+import { useLocalChat } from "@/hooks/useLocalChat";
 import tiffyLogo from "@/assets/tiffy-logo.png";
 
 export function ChatContainer() {
@@ -24,9 +23,8 @@ export function ChatContainer() {
     startNewConversation,
     deleteConversation,
     renameConversation,
-  } = useChat();
-  
-  const { user, signOut } = useAuth();
+  } = useLocalChat();
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -83,8 +81,8 @@ export function ChatContainer() {
                 Tiffy
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
               </h1>
-              <p className="text-xs text-muted-foreground truncate max-w-[150px]">
-                {user?.email}
+              <p className="text-xs text-muted-foreground">
+                Ton assistant IA
               </p>
             </div>
           </div>

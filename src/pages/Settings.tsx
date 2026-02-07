@@ -1,19 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Palette, Bell, Shield, LogOut, Moon, Sun, Monitor, Sparkles, Download } from "lucide-react";
+import { ArrowLeft, Palette, Bell, Shield, Moon, Sun, Monitor, Sparkles, Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import tiffyLogo from "@/assets/tiffy-logo.png";
 
+const STORAGE_KEY = "tiffy_conversations";
+
 export default function Settings() {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -39,9 +37,9 @@ export default function Settings() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
+  const handleClearHistory = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    toast.success("Historique supprimé");
   };
 
   const themes = [
@@ -72,35 +70,9 @@ export default function Settings() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6 relative">
-        {/* Profile Section */}
-        <section className="space-y-3 animate-fade-in">
-          <div className="flex items-center gap-2 px-1">
-            <User className="h-4 w-4 text-primary" />
-            <h2 className="text-lg font-semibold">Profil</h2>
-          </div>
-          <div className="card-elevated p-6">
-            <div className="flex items-center gap-5">
-              <div className="relative">
-                <div className="h-18 w-18 rounded-2xl bg-gradient-to-br from-primary to-accent p-0.5 ai-glow">
-                  <div className="h-full w-full rounded-2xl bg-card flex items-center justify-center">
-                    <img src={tiffyLogo} alt="Avatar" className="h-14 w-14 rounded-xl object-cover" />
-                  </div>
-                </div>
-                <div className="absolute -bottom-1 -right-1 bg-accent p-1 rounded-full">
-                  <Sparkles className="h-3 w-3 text-accent-foreground" />
-                </div>
-              </div>
-              <div>
-                <p className="font-semibold text-lg">{user?.email}</p>
-                <p className="text-sm text-muted-foreground">Membre depuis peu</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Install PWA Section */}
         {(deferredPrompt || 'standalone' in navigator) && (
-          <section className="space-y-3 animate-fade-in" style={{ animationDelay: "0.05s" }}>
+          <section className="space-y-3 animate-fade-in">
             <div className="flex items-center gap-2 px-1">
               <Download className="h-4 w-4 text-primary" />
               <h2 className="text-lg font-semibold">Installation</h2>
@@ -125,7 +97,7 @@ export default function Settings() {
         )}
 
         {/* Theme Section */}
-        <section className="space-y-3 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+        <section className="space-y-3 animate-fade-in" style={{ animationDelay: "0.05s" }}>
           <div className="flex items-center gap-2 px-1">
             <Palette className="h-4 w-4 text-primary" />
             <h2 className="text-lg font-semibold">Apparence</h2>
@@ -155,7 +127,7 @@ export default function Settings() {
         </section>
 
         {/* Notifications Section */}
-        <section className="space-y-3 animate-fade-in" style={{ animationDelay: "0.15s" }}>
+        <section className="space-y-3 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           <div className="flex items-center gap-2 px-1">
             <Bell className="h-4 w-4 text-primary" />
             <h2 className="text-lg font-semibold">Notifications</h2>
@@ -175,6 +147,29 @@ export default function Settings() {
                 <p className="text-sm text-muted-foreground">Jouer un son lors des réponses</p>
               </div>
               <Switch checked={soundEnabled} onCheckedChange={setSoundEnabled} />
+            </div>
+          </div>
+        </section>
+
+        {/* Clear History Section */}
+        <section className="space-y-3 animate-fade-in" style={{ animationDelay: "0.15s" }}>
+          <div className="flex items-center gap-2 px-1">
+            <Trash2 className="h-4 w-4 text-primary" />
+            <h2 className="text-lg font-semibold">Données</h2>
+          </div>
+          <div className="card-elevated p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Effacer l'historique</p>
+                <p className="text-sm text-muted-foreground">Supprimer toutes les conversations locales</p>
+              </div>
+              <Button
+                variant="destructive"
+                onClick={handleClearHistory}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Effacer
+              </Button>
             </div>
           </div>
         </section>
@@ -200,18 +195,6 @@ export default function Settings() {
               Développé avec ❤️ pour une expérience conversationnelle fluide et intuitive.
             </p>
           </div>
-        </section>
-
-        {/* Logout Section */}
-        <section className="pt-4 animate-fade-in" style={{ animationDelay: "0.25s" }}>
-          <Button
-            variant="destructive"
-            className="w-full h-12 text-base font-medium"
-            onClick={handleSignOut}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Se déconnecter
-          </Button>
         </section>
       </div>
     </div>
