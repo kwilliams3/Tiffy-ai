@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -66,6 +67,10 @@ function AppRoutes() {
             <Settings />
           </ProtectedRoute>
         }
+      />
+      <Route
+        path="/auth/callback"
+        element={<AuthCallback />}
       />
       <Route
         path="/auth"

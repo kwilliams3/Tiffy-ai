@@ -58,9 +58,10 @@ export default function Auth() {
     setIsGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        // Use a dedicated callback route to avoid landing on a 404 after OAuth redirect
+        redirect_uri: `${window.location.origin}/auth/callback`,
       });
-      
+
       if (result.error) {
         toast.error("Erreur lors de la connexion avec Google");
         console.error(result.error);
