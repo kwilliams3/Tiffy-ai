@@ -1,73 +1,64 @@
-# Welcome to your Lovable project
+# Tiffy
 
-## Project info
+Assistant IA avec React, TypeScript, Vite et Gemini. Les conversations restent dans le stockage local du navigateur.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Démarrer
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Installer Node.js 22.18 ou plus récent, puis :
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+npm install
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Copier `.env.example` vers `.env` si nécessaire, puis renseigner la clé créée dans [Google AI Studio](https://aistudio.google.com/apikey) :
 
-# Step 3: Install the necessary dependencies.
-npm i
+```dotenv
+GEMINI_API_KEY=ta-cle-google
+FRONTEND_PORT=5187
+BACKEND_PORT=4317
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Lancer l'application :
+
+```sh
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Ouvrir http://localhost:5187. `npm run dev` démarre le frontend (5187) et le backend (4317). Redémarrer après toute modification de `.env`. Les ports sont configurables avec `FRONTEND_PORT` et `BACKEND_PORT`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Pour les lancer séparément : `npm run dev:front` et `npm run dev:back`. Les requêtes `/api` sont transmises au backend par le proxy Vite.
 
-**Use GitHub Codespaces**
+## Fonctionnement
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Le navigateur envoie les messages à `/api/chat`. Le serveur appelle directement Gemini 2.5 Flash et transmet les réponses progressivement. La clé reste sur le serveur et ne doit jamais porter le préfixe `VITE_`. Les fichiers `.env` sont exclus de Git.
 
-## What technologies are used for this project?
+Google reçoit les messages de la conversation. L'offre gratuite est limitée par des quotas ; les contenus peuvent servir à améliorer les produits Google selon ses conditions. Consulter les [tarifs officiels](https://ai.google.dev/gemini-api/docs/pricing).
 
-This project is built with:
+## Déployer sur Vercel
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Le projet contient la fonction `api/chat.ts` et sa configuration de routage. Importer le dépôt sur Vercel avec le préréglage Vite, puis ajouter `GEMINI_API_KEY` dans les variables d'environnement du projet et déployer.
 
-## How can I deploy this project?
+Un hébergement de fichiers statiques seul ne suffit pas : `/api/chat` doit être exécuté par un serveur. Pour prévisualiser la compilation localement, lancer `npm run dev:back` et `npm run preview` dans deux terminaux.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Installation sur un serveur sans accès au registre npm
 
-## Can I connect a custom domain to my Lovable project?
+Sur un autre ordinateur **Windows x64** avec Node.js 22.18 ou plus récent et un accès Internet, copier ce projet puis exécuter :
 
-Yes, you can!
+```powershell
+powershell -File scripts/prepare-offline.ps1
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Le script installe les dépendances, vérifie la compilation et crée `tiffy-windows-x64.offline.zip`. Le fichier `.env` et la clé Gemini ne sont pas inclus.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Transférer l'archive sur le serveur Windows x64, arrêter les processus de cette application avant l'extraction, puis extraire son contenu dans le dossier du projet. Conserver le `.env` du serveur. Lancer ensuite `npm run dev`, sans réinstaller les dépendances. Le serveur devra toujours pouvoir joindre `generativelanguage.googleapis.com` pour les réponses Gemini.
+
+## Vérifications
+
+```sh
+npm run test:api
+npm test
+npm run lint
+npm run build
+```
+
+Les tests API utilisent des réponses Gemini simulées et ne nécessitent aucune clé.

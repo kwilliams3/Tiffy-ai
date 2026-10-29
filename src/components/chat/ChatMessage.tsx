@@ -1,42 +1,20 @@
 import { cn } from "@/lib/utils";
-import { User, Sparkles } from "lucide-react";
+import { Copy, Sparkles } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 import type { Message } from "@/hooks/useLocalChat";
 
-interface ChatMessageProps {
-  message: Message;
-}
-
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message }: { message: Message }) {
   const isUser = message.role === "user";
-
-  return (
-    <div
-      className={cn(
-        "flex gap-4 animate-slide-up",
-        isUser ? "flex-row-reverse" : "flex-row"
-      )}
-    >
-      <div
-        className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-md",
-          isUser
-            ? "bg-gradient-to-br from-primary/80 to-primary text-primary-foreground"
-            : "bg-gradient-to-br from-primary to-accent text-primary-foreground ai-glow"
-        )}
-      >
-        {isUser ? <User className="h-4.5 w-4.5" /> : <Sparkles className="h-4.5 w-4.5" />}
-      </div>
-      <div
-        className={cn(
-          "max-w-[80%] whitespace-pre-wrap",
-          isUser ? "message-bubble-user" : "message-bubble-ai"
-        )}
-      >
-        <p className={cn(
-          "text-sm leading-relaxed",
-          isUser ? "text-primary-foreground" : "text-foreground"
-        )}>{message.content}</p>
-      </div>
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(message.content); toast.success("Réponse copiée !"); }
+    catch { toast.error("La copie n’est pas disponible dans ce navigateur."); }
+  };
+  return <article className={cn("chat-message animate-slide-up", isUser && "is-user")}>
+    {!isUser && <div className="message-avatar" aria-hidden="true"><Sparkles className="h-4 w-4" /></div>}
+    <div className="message-content"><div className={cn("message-author", isUser && "text-right")}>{isUser ? "Toi" : "Tiffy"}{!isUser && <span>Un coup de main pour avancer</span>}</div>
+      <div className={isUser ? "message-bubble-user" : "message-bubble-ai"}>{isUser ? <p className="whitespace-pre-wrap break-words text-sm leading-7">{message.content}</p> : <div className="markdown-body"><ReactMarkdown components={{ a: ({ children, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer">{children}</a> }}>{message.content}</ReactMarkdown></div>}</div>
+      {!isUser && <button onClick={copy} className="copy-response" aria-label="Copier la réponse de Tiffy"><Copy className="h-3 w-3" />Copier</button>}
     </div>
-  );
+  </article>;
 }

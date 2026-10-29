@@ -16,7 +16,7 @@ export interface Conversation {
 }
 
 const STORAGE_KEY = "tiffy_conversations";
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+const CHAT_URL = "/api/chat";
 
 function loadFromStorage(): Conversation[] {
   try {
@@ -134,7 +134,6 @@ export function useLocalChat() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({
             messages: [...currentMessages, userMessage].map((m) => ({

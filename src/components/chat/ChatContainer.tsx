@@ -1,6 +1,6 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Plus, Settings, Sparkles } from "lucide-react";
+import { Menu, Plus, Settings, ArrowUpRight, Feather, Lightbulb, Compass, Code2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
@@ -8,157 +8,71 @@ import { TypingIndicator } from "./TypingIndicator";
 import { ConversationSidebar } from "./ConversationSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useLocalChat } from "@/hooks/useLocalChat";
-import tiffyLogo from "@/assets/tiffy-logo.png";
+
+const suggestions = [
+  { icon: Feather, title: "Trouver les bons mots", text: "Un texte qui fait la différence.", prompt: "Aide-moi à rédiger un texte. Pose-moi des questions pour comprendre mon besoin.", color: "peach" },
+  { icon: Lightbulb, title: "Faire naître une idée", text: "Un peu d’inspiration pour démarrer.", prompt: "Propose-moi des idées créatives pour un nouveau projet.", color: "sage" },
+  { icon: Compass, title: "Y voir plus clair", text: "Un plan simple pour avancer.", prompt: "Aide-moi à organiser ma semaine et mes priorités.", color: "lavender" },
+  { icon: Code2, title: "Comprendre & créer", text: "De la curiosité à la pratique.", prompt: "Explique-moi un concept de programmation avec un exemple simple.", color: "sand" },
+];
 
 export function ChatContainer() {
   const navigate = useNavigate();
-  const {
-    messages,
-    conversations,
-    currentConversationId,
-    isLoading,
-    isLoadingConversations,
-    sendMessage,
-    selectConversation,
-    startNewConversation,
-    deleteConversation,
-    renameConversation,
-  } = useLocalChat();
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chat = useLocalChat();
+  const endRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+  const conversation = chat.conversations.find(c => c.id === chat.currentConversationId);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }, [chat.messages]);
 
   return (
-    <div className="flex h-screen chat-container">
-      {/* Decorative background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/3 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent/3 rounded-full blur-3xl" />
-      </div>
-
-      {/* Sidebar */}
-      <ConversationSidebar
-        conversations={conversations}
-        currentConversationId={currentConversationId}
-        isLoading={isLoadingConversations}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onSelect={(id) => {
-          selectConversation(id);
-          setSidebarOpen(false);
-        }}
-        onNew={() => {
-          startNewConversation();
-          setSidebarOpen(false);
-        }}
-        onDelete={deleteConversation}
-        onRename={renameConversation}
-      />
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Header */}
-        <header className="flex items-center justify-between glass-effect px-4 py-3 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-            <div className="relative">
-              <img src={tiffyLogo} alt="Tiffy" className="h-11 w-11 rounded-xl ai-glow" />
-              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-accent rounded-full border-2 border-card" />
-            </div>
-            <div>
-              <h1 className="font-semibold text-foreground flex items-center gap-1.5">
-                Tiffy
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Ton assistant IA
-              </p>
-            </div>
+    <div className="app-shell">
+      <ConversationSidebar conversations={chat.conversations} currentConversationId={chat.currentConversationId}
+        isLoading={chat.isLoadingConversations} isOpen={sidebarOpen} onClose={closeSidebar}
+        onSelect={id => { chat.selectConversation(id); setSidebarOpen(false); }}
+        onNew={() => { chat.startNewConversation(); setSidebarOpen(false); }} onDelete={chat.deleteConversation} onRename={chat.renameConversation} />
+      <main className="chat-main">
+        <header className="workspace-header">
+          <div className="flex min-w-0 items-center gap-3">
+            <Button variant="ghost" size="icon" className="md:hidden" aria-label="Ouvrir les conversations" onClick={() => setSidebarOpen(true)}><Menu className="h-5 w-5" /></Button>
+            <div className="header-mark"><Sparkles className="h-4 w-4" /></div>
+            <div className="min-w-0"><p className="truncate text-sm font-semibold">{conversation?.title || "Un nouvel espace pour tes idées"}</p><p className="text-xs text-muted-foreground">Avec Tiffy, avance à ton rythme.</p></div>
           </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={startNewConversation}
-              className="hidden md:flex gap-1.5 font-medium"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Nouvelle
-            </Button>
+          <div className="flex shrink-0 items-center gap-1">
+            <Button variant="ghost" size="icon" aria-label="Nouvelle conversation" onClick={chat.startNewConversation}><Plus className="h-4 w-4" /></Button>
             <ThemeToggle />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/settings")}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              title="Paramètres"
-            >
-              <Settings className="h-4.5 w-4.5" />
-            </Button>
+            <Button variant="ghost" size="icon" aria-label="Paramètres" onClick={() => navigate("/settings")}><Settings className="h-4 w-4" /></Button>
           </div>
         </header>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-8">
-          <div className="mx-auto max-w-2xl space-y-6">
-            {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
-                <div className="relative mb-8">
-                  <img src={tiffyLogo} alt="Tiffy" className="h-28 w-28 ai-glow rounded-3xl" />
-                  <div className="absolute -top-2 -right-2 bg-gradient-to-br from-primary to-accent p-2 rounded-full shadow-lg">
-                    <Sparkles className="h-5 w-5 text-primary-foreground" />
-                  </div>
-                </div>
-                <h2 className="text-3xl font-bold gradient-text mb-3">
-                  Salut ! Je suis Tiffy
-                </h2>
-                <p className="text-muted-foreground max-w-sm text-lg mb-8">
-                  Ton assistant IA personnel. Pose-moi n'importe quelle question !
-                </p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {["💡 Comment ça marche ?", "🎯 Aide-moi à planifier", "✨ Donne-moi des idées"].map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => sendMessage(suggestion.replace(/^[^\s]+\s/, ""))}
-                      className="px-4 py-2 rounded-full bg-muted/80 hover:bg-muted text-sm font-medium text-muted-foreground hover:text-foreground transition-all duration-200 hover:shadow-md"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <>
-                {messages.map((message) => (
-                  <ChatMessage key={message.id} message={message} />
+        <div className="chat-scroll">
+          {chat.messages.length === 0 ? (
+            <section className="welcome animate-slide-up">
+              <div className="welcome-kicker"><span className="tiny-star">✳</span> TON QUOTIDIEN, UN PEU PLUS SIMPLE</div>
+              <div className="welcome-emblem" aria-hidden="true"><Sparkles /></div>
+              <h1>Les grandes idées<br />commencent par <em>un bonjour.</em></h1>
+              <p className="welcome-description">Une question, une idée, une envie de créer ?<br className="hidden sm:block" /> Je suis Tiffy. Réfléchissons ensemble.</p>
+              <div className="suggestion-grid">
+                {suggestions.map(({ icon: Icon, title, text, prompt, color }) => (
+                  <button key={title} className={`suggestion-card ${color}`} disabled={chat.isLoading} onClick={() => chat.sendMessage(prompt)}>
+                    <div className="flex items-center justify-between"><span className="suggestion-icon"><Icon className="h-5 w-5" /></span><ArrowUpRight className="suggestion-arrow h-4 w-4" /></div>
+                    <h2>{title}</h2><p>{text}</p>
+                  </button>
                 ))}
-                {isLoading && messages[messages.length - 1]?.role === "user" && (
-                  <TypingIndicator />
-                )}
-              </>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+              </div>
+              <p className="welcome-note">Pas besoin d’avoir les mots parfaits. Commence simplement.</p>
+            </section>
+          ) : (
+            <div className="message-list" role="log" aria-label="Messages de la conversation" aria-busy={chat.isLoading}>
+              <div className="conversation-start"><span />Le début d’une bonne conversation<span /></div>
+              {chat.messages.map(message => <ChatMessage key={message.id} message={message} />)}
+              {chat.isLoading && chat.messages.at(-1)?.role === "user" && <TypingIndicator />}
+            </div>
+          )}
+          <div ref={endRef} />
         </div>
-
-        {/* Input */}
-        <div className="glass-effect px-4 py-4">
-          <div className="mx-auto max-w-2xl relative">
-            <ChatInput onSend={sendMessage} isLoading={isLoading} />
-          </div>
-        </div>
-      </div>
+        <footer className="composer-footer"><ChatInput onSend={chat.sendMessage} isLoading={chat.isLoading} /></footer>
+      </main>
     </div>
   );
 }

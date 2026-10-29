@@ -1,21 +1,27 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), ["FRONTEND_", "BACKEND_"]);
+  const frontendPort = Number(process.env.FRONTEND_PORT || env.FRONTEND_PORT || 5187);
+  const backendPort = Number(process.env.BACKEND_PORT || env.BACKEND_PORT || 4317);
+  const proxy = { "/api": { target: `http://127.0.0.1:${backendPort}` } };
+  return {
   server: {
     host: "::",
-    port: 8080,
+    port: frontendPort,
+    strictPort: true,
+    proxy,
     hmr: {
       overlay: false,
     },
   },
+  preview: { port: frontendPort, strictPort: true, proxy },
   plugins: [
     react(),
-    mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "tiffy-icon-192.png", "tiffy-icon-512.png"],
@@ -23,8 +29,8 @@ export default defineConfig(({ mode }) => ({
         name: "Tiffy - Assistant IA",
         short_name: "Tiffy",
         description: "Ton assistant IA personnel, toujours prêt à t'aider !",
-        theme_color: "#14b8a6",
-        background_color: "#0f172a",
+        theme_color: "#263e30",
+        background_color: "#faf8f4",
         display: "standalone",
         orientation: "portrait",
         scope: "/",
@@ -70,4 +76,5 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+  };
+});
