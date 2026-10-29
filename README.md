@@ -36,6 +36,16 @@ Google reçoit les messages de la conversation. L'offre gratuite est limitée pa
 
 ## Conversations et outils
 
+### Voix
+
+Le bouton **micro** du chat permet de dicter un message en français : la voix est transcrite dans le champ de saisie, puis l’utilisateur arrête la dictée, relit et envoie son texte. Il ne s’agit pas d’une pièce jointe audio ; Tiffy n’enregistre pas de fichier vocal dans l’historique. L’autorisation du microphone est demandée au démarrage de la dictée. Le micro s’arrête après une minute au maximum et à la fermeture du chat.
+
+La dictée utilise `SpeechRecognition` ou `webkitSpeechRecognition` lorsqu’ils sont disponibles, en contexte sécurisé. Certains navigateurs utilisent un service distant pour transcrire l’audio : la dictée n’est donc pas garantie hors ligne. Si elle n’est pas prise en charge, le bouton est désactivé avec une explication et la saisie texte reste disponible.
+
+Le bouton **Écouter** sous une réponse lance sa lecture et permet de l’arrêter. L’icône haut-parleur dans le champ de saisie, ou **Paramètres → À ton rythme → Réponses vocales**, active la lecture automatique des réponses terminées quand l’onglet est visible. Ce réglage est mémorisé sur l’appareil. Les longs textes sont lus par petits segments ; la mise en forme Markdown est simplifiée et les blocs de code ne sont pas épelés. Commencer une dictée, envoyer un nouveau message ou changer de conversation arrête la lecture précédente. La synthèse utilise les voix disponibles sur le système, sans clé API supplémentaire. Les politiques audio du navigateur peuvent imposer un clic manuel sur « Écouter ».
+
+Références : [reconnaissance vocale](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition) et [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API).
+
 Dans **Paramètres → Personnalité**, le **Mode taquin** permet à Tiffy de répondre au chambrage par des piques et des répliques familières. Il est désactivé par défaut et enregistré séparément de l’historique sur cet appareil. Le réglage est envoyé avec chaque nouvelle demande, y compris les relances. Tiffy reste sérieux pour les demandes d’aide et arrête les plaisanteries quand l’utilisateur le demande. Ce choix de ton ne désactive pas les règles du fournisseur IA.
 
 Dans **Paramètres → À ton rythme**, les **Notifications** et les **Sons** sont activables séparément et mémorisés sur cet appareil. Les notifications nécessitent une autorisation du navigateur et un contexte sécurisé (HTTPS ou localhost). Elles apparaissent uniquement si l’onglet est en arrière-plan, après une réponse réussie ; cliquer dessus ouvre la conversation. Les notifications ne contiennent pas le texte de la discussion. Sur mobile, la prise en charge dépend du navigateur et peut nécessiter l’installation de l’application. Tiffy doit rester ouvert pendant la génération : il ne s’agit pas de notifications push lorsque l’application est fermée.

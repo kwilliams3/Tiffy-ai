@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:api": "node --test server/chat.test.mjs server/chat-features.test.mjs",
+    "test:api": "node --test server/chat.test.mjs server/chat-features.test.mjs server/voice.test.mjs",
     "dev:front": "vite",
     "dev:back": "node --watch server/index.ts"
   },

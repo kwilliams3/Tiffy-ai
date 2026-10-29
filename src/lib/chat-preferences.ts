@@ -23,6 +23,11 @@ export function saveReplyPreference(storage: PreferenceStorage, name: "notificat
   savePreference(storage, name, enabled);
 }
 
+export function loadAutoSpeak(storage?: PreferenceStorage): boolean {
+  try { return JSON.parse(storage?.getItem(key) || "{}")?.autoSpeak === true; } catch { return false; }
+}
+export function saveAutoSpeak(storage: PreferenceStorage, enabled: boolean) { savePreference(storage, "autoSpeak", enabled); }
+
 function savePreference(storage: PreferenceStorage, name: string, enabled: boolean) {
   let previous = {};
   try {
