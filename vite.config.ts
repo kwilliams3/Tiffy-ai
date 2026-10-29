@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "tiffy-icon-192.png", "tiffy-icon-512.png"],
+      includeAssets: ["favicon.ico", "tiffy-logo.svg", "tiffy-icon-192.png", "tiffy-icon-512.png"],
       manifest: {
         name: "Tiffy - Assistant IA",
         short_name: "Tiffy",

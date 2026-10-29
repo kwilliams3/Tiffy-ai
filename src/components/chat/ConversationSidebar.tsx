@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { MessageSquare, Plus, Trash2, X, Pencil, Check, Sparkles, Search, Settings, ArrowUpRight } from "lucide-react";
+import { MessageSquare, Plus, Trash2, X, Pencil, Check, Search, Settings, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -40,7 +40,7 @@ export function ConversationSidebar({ conversations, currentConversationId, isLo
   return <>
     {isOpen && <button className="sidebar-overlay md:hidden" aria-label="Fermer le menu" onClick={onClose} />}
     <aside ref={sidebarRef} className={cn("tiffy-sidebar", isOpen && "is-open")} aria-label="Conversations">
-      <div className="sidebar-brand"><Link to="/" className="brand-link" aria-label="Tiffy, accueil"><span className="brand-symbol"><Sparkles className="h-6 w-6" /></span><span className="brand-word">tiffy<span>.</span></span></Link><button ref={closeRef} className="sidebar-icon md:hidden" aria-label="Fermer le menu" onClick={onClose}><X className="h-5 w-5" /></button></div>
+      <div className="sidebar-brand"><Link to="/" className="brand-link" aria-label="Tiffy, accueil"><img src="/tiffy-logo.svg" alt="" className="h-11 w-11 rounded-2xl border border-white/10" /><span className="brand-word">tiffy<span>.</span></span></Link><button ref={closeRef} className="sidebar-icon md:hidden" aria-label="Fermer le menu" onClick={onClose}><X className="h-5 w-5" /></button></div>
       <p className="sidebar-tagline">Un peu d’aide. Plein de possibilités.</p>
       <button className="new-chat-button" onClick={onNew}><Plus className="h-4 w-4" />Nouvelle conversation<ArrowUpRight className="ml-auto h-4 w-4" /></button>
       <label className="sidebar-search"><Search className="h-4 w-4" /><input aria-label="Rechercher une conversation" placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} />{search && <button aria-label="Effacer la recherche" onClick={() => setSearch("")}><X className="h-3 w-3" /></button>}</label>

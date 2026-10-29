@@ -49,7 +49,7 @@ export function ChatContainer() {
           {chat.messages.length === 0 ? (
             <section className="welcome animate-slide-up">
               <div className="welcome-kicker"><span className="tiny-star">✳</span> TON QUOTIDIEN, UN PEU PLUS SIMPLE</div>
-              <div className="welcome-emblem" aria-hidden="true"><Sparkles /></div>
+              <div className="welcome-emblem" aria-hidden="true"><img src="/tiffy-logo.svg" alt="" className="h-full w-full rounded-[20px]" /></div>
               <h1>Les grandes idées<br />commencent par <em>un bonjour.</em></h1>
               <p className="welcome-description">Une question, une idée, une envie de créer ?<br className="hidden sm:block" /> Je suis Tiffy. Réfléchissons ensemble.</p>
               <div className="suggestion-grid">
