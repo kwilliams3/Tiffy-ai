@@ -40,7 +40,8 @@ export async function handleChat(req, res, options = {}) {
   )) return json(400, "La conversation doit contenir des messages valides.");
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60_000);
+  // Leave time to send a JSON error before Vercel's 60-second limit.
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 45_000);
   const onClose = () => controller.abort();
   res.on("close", onClose);
   try {
@@ -48,7 +49,7 @@ export async function handleChat(req, res, options = {}) {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gemini-3.8-flash",
+        model: "gemini-3.1-flash-lite",
         messages: [{ role: "system", content: systemPrompt }, ...messages.map(({ role, content }) => ({ role, content }))],
         stream: true,
       }),
@@ -83,7 +84,10 @@ export async function handleChat(req, res, options = {}) {
     }
     await pipeline(Readable.from(chunks()), res);
   } catch {
-    if (!res.headersSent && !res.destroyed) json(502, "Impossible de joindre Gemini. Réessayez plus tard.");
+    if (!res.headersSent && !res.destroyed) {
+      if (controller.signal.aborted) json(504, "Google met trop de temps à répondre. Réessayez dans un instant.");
+      else json(502, "Impossible de joindre Gemini. Réessayez plus tard.");
+    }
     else if (!res.destroyed) res.end();
   } finally {
     clearTimeout(timeout);

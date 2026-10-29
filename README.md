@@ -30,7 +30,7 @@ Pour les lancer séparément : `npm run dev:front` et `npm run dev:back`. Les re
 
 ## Fonctionnement
 
-Le navigateur envoie les messages à `/api/chat`. Le serveur appelle directement Gemini 3.8 Flash et transmet les réponses progressivement. La clé reste sur le serveur et ne doit jamais porter le préfixe `VITE_`. Les fichiers `.env` sont exclus de Git.
+Le navigateur envoie les messages à `/api/chat`. Le serveur appelle directement Gemini 3.1 Flash-Lite et transmet les réponses progressivement. La clé reste sur le serveur et ne doit jamais porter le préfixe `VITE_`. Les fichiers `.env` sont exclus de Git.
 
 Google reçoit les messages de la conversation. L'offre gratuite est limitée par des quotas ; les contenus peuvent servir à améliorer les produits Google selon ses conditions. Consulter les [tarifs officiels](https://ai.google.dev/gemini-api/docs/pricing).
 

@@ -22,7 +22,7 @@ test("streams Gemini responses through the application API", async () => {
     assert.equal(url, "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions");
     assert.equal(init.headers.Authorization, "Bearer private-test-key");
     const body = JSON.parse(init.body);
-    assert.equal(body.model, "gemini-3.8-flash");
+    assert.equal(body.model, "gemini-3.1-flash-lite");
     assert.equal(body.stream, true);
     assert.equal(body.messages[0].role, "system");
     assert.deepEqual(body.messages[1], { role: "user", content: "Bonjour" });
@@ -127,5 +127,15 @@ test("recognizes invalid-key errors returned as HTTP 400", async () => {
     const response = await post(url);
     assert.equal(response.status, 502);
     assert.match((await response.json()).error, /clé Gemini est invalide/);
+  });
+});
+
+test("returns a JSON timeout before the hosting platform cuts off the function", async () => {
+  await withServer({ apiKey: "test", timeoutMs: 5, fetchImpl: async (_url, init) => new Promise((_resolve, reject) => {
+    init.signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+  }) }, async url => {
+    const response = await post(url);
+    assert.equal(response.status, 504);
+    assert.match((await response.json()).error, /trop de temps/);
   });
 });
