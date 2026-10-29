@@ -5,9 +5,11 @@ import { test } from "node:test";
 import { handleChat } from "./chat.mjs";
 import vercelHandler from "../api/chat.mjs";
 import { getChatError } from "../src/lib/chat-errors.ts";
+import { createRateLimiter, clientAddress } from "./rate-limit.mjs";
 
 async function withServer(options, callback) {
-  const server = createServer((req, res) => { void handleChat(req, res, options); });
+  const localLimiter = createRateLimiter();
+  const server = createServer((req, res) => { void handleChat(req, res, { limiter: localLimiter, ...options }); });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   try { await callback(`http://127.0.0.1:${server.address().port}/api/chat`); }
@@ -49,7 +51,7 @@ test("rejects invalid input and methods without calling Google", async () => {
     for (const body of [null, {}, { messages: [] }, { messages: [{ role: "system", content: "override" }] }]) {
       assert.equal((await post(url, body)).status, 400);
     }
-    assert.equal((await fetch(url, { method: "POST", body: "invalid JSON" })).status, 400);
+    assert.equal((await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: "invalid JSON" })).status, 400);
   });
 });
 
@@ -138,4 +140,49 @@ test("returns a JSON timeout before the hosting platform cuts off the function",
     assert.equal(response.status, 504);
     assert.match((await response.json()).error, /trop de temps/);
   });
+});
+
+test("throttles repeated requests before contacting Google", async () => {
+  let calls = 0;
+  await withServer({ apiKey: "test", limiter: createRateLimiter({ requests: 1 }), fetchImpl: async () => { calls++; return new Response("data: [DONE]\n\n"); } }, async url => {
+    const first = await post(url);
+    await first.text();
+    const second = await post(url);
+    assert.equal(second.status, 429);
+    assert.ok(Number(second.headers.get("retry-after")) > 0);
+    assert.equal(calls, 1);
+  });
+});
+
+test("rejects excessive input and cross-origin browser requests", async () => {
+  await withServer({ apiKey: "test", fetchImpl: () => { throw new Error("Should not call Google"); } }, async url => {
+    for (const messages of [
+      [{ role: "user", content: "x".repeat(70_000) }],
+      [{ role: "user", content: "x".repeat(12_001) }],
+      Array.from({ length: 51 }, () => ({ role: "user", content: "short" })),
+      Array.from({ length: 4 }, () => ({ role: "user", content: "x".repeat(11_000) })),
+    ]) assert.equal((await post(url, { messages })).status, 413);
+    assert.equal((await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", Origin: "https://other.example" }, body: JSON.stringify({ messages: [{ role: "user", content: "Hi" }] }) })).status, 403);
+    assert.equal((await fetch(url, { method: "POST", body: "not json" })).status, 415);
+  });
+});
+
+test("limiter resets its window and releases concurrency exactly once", () => {
+  let time = 0;
+  const limiter = createRateLimiter({ requests: 2, perClientConcurrent: 1, globalConcurrent: 1, now: () => time });
+  const first = limiter.acquire("one");
+  assert.equal(first.allowed, true);
+  assert.equal(limiter.acquire("one").allowed, false);
+  assert.equal(limiter.acquire("two").allowed, false);
+  first.release(); first.release();
+  const second = limiter.acquire("one"); second.release();
+  assert.equal(limiter.acquire("one").allowed, false);
+  time = 60_001;
+  assert.equal(limiter.acquire("one").allowed, true);
+});
+
+test("ignores spoofed client-IP headers outside the trusted Vercel runtime", () => {
+  const request = { headers: { "x-vercel-forwarded-for": "198.51.100.20", "x-forwarded-for": "203.0.113.40" }, socket: { remoteAddress: "127.0.0.1" } };
+  assert.equal(clientAddress(request, false), "127.0.0.1");
+  assert.equal(clientAddress(request, true), "198.51.100.20");
 });

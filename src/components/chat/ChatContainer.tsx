@@ -1,10 +1,11 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Plus, Settings, ArrowUpRight, Feather, Lightbulb, Compass, Code2, Sparkles } from "lucide-react";
+import { Menu, Plus, Settings, ArrowUpRight, Feather, Lightbulb, Compass, Code2, Sparkles, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
-import { TypingIndicator } from "./TypingIndicator";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { downloadConversations } from "@/lib/chat-export";
 import { ConversationSidebar } from "./ConversationSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useLocalChat } from "@/hooks/useLocalChat";
@@ -40,6 +41,7 @@ export function ChatContainer() {
             <div className="min-w-0"><p className="truncate text-sm font-semibold">{conversation?.title || "Un nouvel espace pour tes idées"}</p><p className="text-xs text-muted-foreground">Avec Tiffy, avance à ton rythme.</p></div>
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Exporter les conversations" disabled={!chat.conversations.length}><Download className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem disabled={!conversation} onSelect={() => conversation && downloadConversations([conversation], "md")}>Cette conversation en Markdown</DropdownMenuItem><DropdownMenuItem disabled={!conversation} onSelect={() => conversation && downloadConversations([conversation], "json")}>Cette conversation en JSON</DropdownMenuItem><DropdownMenuItem onSelect={() => downloadConversations(chat.conversations, "json")}>Tout l’historique en JSON</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
             <Button variant="ghost" size="icon" aria-label="Nouvelle conversation" onClick={chat.startNewConversation}><Plus className="h-4 w-4" /></Button>
             <ThemeToggle />
             <Button variant="ghost" size="icon" aria-label="Paramètres" onClick={() => navigate("/settings")}><Settings className="h-4 w-4" /></Button>
@@ -65,13 +67,12 @@ export function ChatContainer() {
           ) : (
             <div className="message-list" role="log" aria-label="Messages de la conversation" aria-busy={chat.isLoading}>
               <div className="conversation-start"><span />Le début d’une bonne conversation<span /></div>
-              {chat.messages.map(message => <ChatMessage key={message.id} message={message} />)}
-              {chat.isLoading && chat.messages.at(-1)?.role === "user" && <TypingIndicator />}
+              {chat.messages.map((message, index) => <ChatMessage key={message.id} message={message} isBusy={chat.isLoading} canRetry={index === chat.messages.length - 1} onRetry={chat.retryMessage} onEdit={chat.editMessage} />)}
             </div>
           )}
           <div ref={endRef} />
         </div>
-        <footer className="composer-footer"><ChatInput onSend={chat.sendMessage} isLoading={chat.isLoading} /></footer>
+        <footer className="composer-footer"><ChatInput onSend={chat.sendMessage} isLoading={chat.isLoading} onStop={chat.stopResponse} /></footer>
       </main>
     </div>
   );

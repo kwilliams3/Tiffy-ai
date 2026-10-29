@@ -1,5 +1,9 @@
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { createRateLimiter, clientAddress } from "./rate-limit.mjs";
+
+const limiter = createRateLimiter();
+const MAX_BODY_BYTES = 65_536;
 
 const endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 const systemPrompt = "Tu es Tiffy, un assistant IA amical et serviable. Tu réponds de manière concise et claire, avec une touche de personnalité chaleureuse. Tu réponds dans la langue de l'utilisateur. Lorsqu'on te demande qui t'a créé(e), tu réponds que c'est Williams Doteu (aussi connu sous le nom de Franck Doteu ou le King Williams).";
@@ -13,6 +17,13 @@ export async function handleChat(req, res, options = {}) {
     res.setHeader("Allow", "POST");
     return json(405, "Méthode non autorisée.");
   }
+  const origin = req.headers.origin;
+  if (origin) {
+    try { if (new URL(origin).host !== req.headers.host) return json(403, "Cette requête doit provenir de l’application Tiffy."); }
+    catch { return json(403, "Origine de la requête invalide."); }
+  }
+  if (req.headers["content-type"]?.toLowerCase().split(";")[0].trim() !== "application/json") return json(415, "Le message doit être envoyé au format JSON.");
+  if (Number(req.headers["content-length"]) > MAX_BODY_BYTES) return json(413, "Conversation trop volumineuse.");
   const apiKey = (options.apiKey ?? process.env.GEMINI_API_KEY)?.trim();
   if (!apiKey) return json(503, "Configurez GEMINI_API_KEY dans les variables du serveur (sur Vercel : Settings > Environment Variables), puis redeployez.");
 
@@ -24,13 +35,15 @@ export async function handleChat(req, res, options = {}) {
       for await (const chunk of req) {
         const buffer = Buffer.from(chunk);
         size += buffer.length;
-        if (size > 1_000_000) return json(413, "Conversation trop volumineuse.");
+        if (size > MAX_BODY_BYTES) return json(413, "Conversation trop volumineuse.");
         chunks.push(buffer);
       }
       body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
     } else if (typeof body === "string") {
+      if (Buffer.byteLength(body) > MAX_BODY_BYTES) return json(413, "Conversation trop volumineuse.");
       body = JSON.parse(body);
     }
+    if (Buffer.byteLength(JSON.stringify(body) || "") > MAX_BODY_BYTES) return json(413, "Conversation trop volumineuse.");
   } catch {
     return json(400, "Requête JSON invalide.");
   }
@@ -38,6 +51,15 @@ export async function handleChat(req, res, options = {}) {
   if (!Array.isArray(messages) || messages.length === 0 || messages.some((m) =>
     !m || !["user", "assistant"].includes(m.role) || typeof m.content !== "string" || !m.content.trim()
   )) return json(400, "La conversation doit contenir des messages valides.");
+  if (messages.length > 50 || messages.some(m => m.content.length > 12_000) || messages.reduce((size, m) => size + m.content.length, 0) > 40_000) {
+    return json(413, "Le contexte est trop long. Raccourcissez votre message ou commencez une nouvelle conversation.");
+  }
+
+  const allowance = (options.limiter ?? limiter).acquire(clientAddress(req));
+  if (!allowance.allowed) {
+    res.setHeader("Retry-After", String(allowance.retryAfter));
+    return json(429, `Trop de demandes rapprochées. Réessaie dans ${allowance.retryAfter} secondes.`);
+  }
 
   const controller = new AbortController();
   // Leave time to send a JSON error before Vercel's 60-second limit.
@@ -50,6 +72,7 @@ export async function handleChat(req, res, options = {}) {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: "gemini-3.1-flash-lite",
+        max_tokens: 4096,
         messages: [{ role: "system", content: systemPrompt }, ...messages.map(({ role, content }) => ({ role, content }))],
         stream: true,
       }),
@@ -79,6 +102,7 @@ export async function handleChat(req, res, options = {}) {
           yield value;
         }
       } finally {
+        await reader.cancel().catch(() => {});
         reader.releaseLock();
       }
     }
@@ -90,6 +114,7 @@ export async function handleChat(req, res, options = {}) {
     }
     else if (!res.destroyed) res.end();
   } finally {
+    allowance.release();
     clearTimeout(timeout);
     res.off("close", onClose);
   }
