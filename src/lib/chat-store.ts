@@ -35,7 +35,8 @@ export class ChatStore {
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private onComplete?: (conversationId: string) => void;
   constructor(options: { fetcher?: typeof fetch; storage?: StorageLike; onComplete?: (conversationId: string) => void } = {}) {
-    this.fetcher = options.fetcher ?? fetch;
+    // Browser-native fetch must keep Window as its receiver, not this ChatStore.
+    this.fetcher = options.fetcher ?? globalThis.fetch.bind(globalThis);
     this.storage = options.storage;
     this.onComplete = options.onComplete;
     this.snapshot = { conversations: loadConversations(options.storage), currentConversationId: null, activeMessageId: null, banterMode: loadBanterMode(options.storage) };

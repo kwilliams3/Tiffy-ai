@@ -15,6 +15,23 @@ const last = store => store.getSnapshot().conversations.find(c => c.id === store
 const memoryStorage = () => { let value = "[]"; return { getItem: () => value, setItem: (_key, data) => { value = data; } }; };
 async function until(check) { for (let i = 0; i < 50; i++) { if (check()) return; await new Promise(resolve => setImmediate(resolve)); } assert.fail("Condition was not reached"); }
 
+test("native fetch keeps the browser-global receiver when called by the chat store", async () => {
+  const original = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = function (url) {
+    assert.equal(this, globalThis);
+    assert.equal(url, "/api/chat");
+    calls++;
+    return Promise.resolve(reply());
+  };
+  try {
+    const store = new ChatStore();
+    await store.sendMessage("Bonjour");
+    assert.equal(calls, 1);
+    assert.equal(last(store).status, "complete");
+  } finally { globalThis.fetch = original; }
+});
+
 test("preserves the user's message after an error and retries without duplicating it", async () => {
   let calls = 0;
   const bodies = [];
