@@ -1,4 +1,10 @@
 {
+  "functions": {
+    "api/chat.mjs": {
+      "maxDuration": 60,
+      "includeFiles": "server/chat.mjs"
+    }
+  },
   "rewrites": [
     { "source": "/((?!api(?:/|$)).*)", "destination": "/index.html" }
   ]

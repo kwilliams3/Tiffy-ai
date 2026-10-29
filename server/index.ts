@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { existsSync } from "node:fs";
-import { handleChat } from "./chat.ts";
+import { handleChat } from "./chat.mjs";
 
 if (existsSync(".env")) process.loadEnvFile(".env");
 const port = Number(process.env.BACKEND_PORT || 4317);

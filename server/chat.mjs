@@ -1,14 +1,11 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 
-type ChatRequest = IncomingMessage & { body?: unknown };
-type Options = { apiKey?: string; fetchImpl?: typeof fetch };
 const endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 const systemPrompt = "Tu es Tiffy, un assistant IA amical et serviable. Tu réponds de manière concise et claire, avec une touche de personnalité chaleureuse. Tu réponds dans la langue de l'utilisateur. Lorsqu'on te demande qui t'a créé(e), tu réponds que c'est Williams Doteu (aussi connu sous le nom de Franck Doteu ou le King Williams).";
 
-export async function handleChat(req: ChatRequest, res: ServerResponse, options: Options = {}) {
-  const json = (status: number, error: string) => {
+export async function handleChat(req, res, options = {}) {
+  const json = (status, error) => {
     res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
     res.end(JSON.stringify({ error }));
   };
@@ -17,12 +14,12 @@ export async function handleChat(req: ChatRequest, res: ServerResponse, options:
     return json(405, "Méthode non autorisée.");
   }
   const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
-  if (!apiKey) return json(503, "Ajoutez GEMINI_API_KEY dans le fichier .env du serveur.");
+  if (!apiKey) return json(503, "Configurez GEMINI_API_KEY dans les variables du serveur (sur Vercel : Settings > Environment Variables), puis redeployez.");
 
-  let body: unknown = req.body;
+  let body = req.body;
   try {
     if (body === undefined) {
-      const chunks: Buffer[] = [];
+      const chunks = [];
       let size = 0;
       for await (const chunk of req) {
         const buffer = Buffer.from(chunk);
@@ -37,7 +34,7 @@ export async function handleChat(req: ChatRequest, res: ServerResponse, options:
   } catch {
     return json(400, "Requête JSON invalide.");
   }
-  const messages = (body as { messages?: unknown } | null)?.messages;
+  const messages = body?.messages;
   if (!Array.isArray(messages) || messages.length === 0 || messages.some((m) =>
     !m || !["user", "assistant"].includes(m.role) || typeof m.content !== "string" || !m.content.trim()
   )) return json(400, "La conversation doit contenir des messages valides.");

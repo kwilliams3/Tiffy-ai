@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { test } from "node:test";
-import { handleChat } from "./chat.ts";
+import { handleChat } from "./chat.mjs";
+import vercelHandler from "../api/chat.mjs";
+import { getChatError } from "../src/lib/chat-errors.ts";
 
 async function withServer(options, callback) {
   const server = createServer((req, res) => { void handleChat(req, res, options); });
@@ -84,4 +86,28 @@ test("accepts a body already parsed by the hosting platform", async () => {
     server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));
   }
+});
+
+test("production entry point loads and rejects GET without contacting Gemini", async () => {
+  const server = createServer(vercelHandler);
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  try {
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/api/chat`);
+    assert.equal(response.status, 405);
+    assert.equal(typeof (await response.json()).error, "string");
+  } finally {
+    server.closeAllConnections();
+    await new Promise(resolve => server.close(resolve));
+  }
+});
+
+test("plain text Vercel failure becomes a readable error", async () => {
+  const message = await getChatError(new Response("A server error has occurred\nFUNCTION_INVOCATION_FAILED", { status: 500 }));
+  assert.match(message, /HTTP 500/);
+  assert.doesNotMatch(message, /JSON|FUNCTION_INVOCATION_FAILED/);
+});
+
+test("preserves JSON errors from the backend", async () => {
+  assert.equal(await getChatError(Response.json({ error: "Le quota Gemini est atteint." }, { status: 429 })), "Le quota Gemini est atteint.");
 });

@@ -36,7 +36,7 @@ Google reçoit les messages de la conversation. L'offre gratuite est limitée pa
 
 ## Déployer sur Vercel
 
-Le projet contient la fonction `api/chat.ts` et sa configuration de routage. Importer le dépôt sur Vercel avec le préréglage Vite, puis ajouter `GEMINI_API_KEY` dans les variables d'environnement du projet et déployer.
+Le projet contient la fonction `api/chat.mjs` et sa configuration de routage. Importer le dépôt sur Vercel avec le préréglage Vite, puis ajouter `GEMINI_API_KEY` dans les variables d'environnement du projet et déployer.
 
 Un hébergement de fichiers statiques seul ne suffit pas : `/api/chat` doit être exécuté par un serveur. Pour prévisualiser la compilation localement, lancer `npm run dev:back` et `npm run preview` dans deux terminaux.
 

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
+import { getChatError } from "@/lib/chat-errors";
 
 export interface Message {
   id: string;
@@ -144,8 +145,7 @@ export function useLocalChat() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Erreur de connexion");
+          throw new Error(await getChatError(response));
         }
 
         if (!response.body) {
