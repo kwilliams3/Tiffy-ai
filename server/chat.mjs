@@ -13,7 +13,7 @@ export async function handleChat(req, res, options = {}) {
     res.setHeader("Allow", "POST");
     return json(405, "Méthode non autorisée.");
   }
-  const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
+  const apiKey = (options.apiKey ?? process.env.GEMINI_API_KEY)?.trim();
   if (!apiKey) return json(503, "Configurez GEMINI_API_KEY dans les variables du serveur (sur Vercel : Settings > Environment Variables), puis redeployez.");
 
   let body = req.body;
@@ -48,16 +48,22 @@ export async function handleChat(req, res, options = {}) {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
         messages: [{ role: "system", content: systemPrompt }, ...messages.map(({ role, content }) => ({ role, content }))],
         stream: true,
       }),
       signal: controller.signal,
     });
     if (!response.ok) {
-      await response.body?.cancel();
+      // Google can return either an error object or an array of error objects.
+      const payload = await response.json().catch(() => null);
+      const upstreamError = Array.isArray(payload) ? payload[0]?.error : payload?.error;
+      const reasons = upstreamError?.details?.map(detail => detail?.reason) || [];
+      console.error("Gemini request rejected", { status: response.status, code: upstreamError?.status });
       if (response.status === 429) return json(429, "Le quota Gemini est atteint. Réessayez plus tard.");
-      if ([401, 403].includes(response.status)) return json(502, "La clé Gemini est invalide ou son accès est refusé.");
+      if ([401, 403].includes(response.status) || reasons.includes("API_KEY_INVALID")) return json(502, "La clé Gemini est invalide ou son accès est refusé. Vérifiez GEMINI_API_KEY sur le serveur.");
+      if (response.status === 404) return json(502, "Le modèle Gemini configuré n’est pas disponible pour ce compte. Mettez à jour le modèle sur le serveur.");
+      if (response.status === 400) return json(502, "Google a refusé la requête. Vérifiez la configuration du projet Gemini et les restrictions de sa clé.");
       return json(502, "Gemini est momentanément indisponible.");
     }
     if (!response.body) return json(502, "Gemini a renvoyé une réponse vide.");
