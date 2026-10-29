@@ -36,6 +36,12 @@ Google reçoit les messages de la conversation. L'offre gratuite est limitée pa
 
 ## Conversations et outils
 
+Dans **Paramètres → Personnalité**, le **Mode taquin** permet à Tiffy de répondre au chambrage par des piques et des répliques familières. Il est désactivé par défaut et enregistré séparément de l’historique sur cet appareil. Le réglage est envoyé avec chaque nouvelle demande, y compris les relances. Tiffy reste sérieux pour les demandes d’aide et arrête les plaisanteries quand l’utilisateur le demande. Ce choix de ton ne désactive pas les règles du fournisseur IA.
+
+Dans **Paramètres → À ton rythme**, les **Notifications** et les **Sons** sont activables séparément et mémorisés sur cet appareil. Les notifications nécessitent une autorisation du navigateur et un contexte sécurisé (HTTPS ou localhost). Elles apparaissent uniquement si l’onglet est en arrière-plan, après une réponse réussie ; cliquer dessus ouvre la conversation. Les notifications ne contiennent pas le texte de la discussion. Sur mobile, la prise en charge dépend du navigateur et peut nécessiter l’installation de l’application. Tiffy doit rester ouvert pendant la génération : il ne s’agit pas de notifications push lorsque l’application est fermée.
+
+Le son est une courte note synthétisée localement, sans téléchargement. Il est initialisé lors d’une action de l’utilisateur pour respecter les règles de lecture audio. Aucun son ni notification n’est déclenché après une erreur ou une annulation. Les réglages de l’appareil et du navigateur peuvent bloquer les alertes. Voir les documentations [Notifications](https://developer.mozilla.org/en-US/docs/Web/API/Notifications_API) et [lecture audio](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices).
+
 - **Arrêter** interrompt la génération et conserve le texte déjà reçu. Changer de conversation arrête aussi la réponse en cours.
 - **Réessayer** relance le dernier message après un arrêt ou une erreur, sans le dupliquer. **Nouvelle réponse** régénère la dernière réponse réussie.
 - **Modifier** permet de corriger un message envoyé. La nouvelle réponse remplace les messages situés après celui-ci ; le formulaire le rappelle avant validation.

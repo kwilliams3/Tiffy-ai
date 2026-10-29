@@ -38,7 +38,7 @@ export function ChatContainer() {
           <div className="flex min-w-0 items-center gap-3">
             <Button variant="ghost" size="icon" className="md:hidden" aria-label="Ouvrir les conversations" onClick={() => setSidebarOpen(true)}><Menu className="h-5 w-5" /></Button>
             <div className="header-mark"><Sparkles className="h-4 w-4" /></div>
-            <div className="min-w-0"><p className="truncate text-sm font-semibold">{conversation?.title || "Un nouvel espace pour tes idées"}</p><p className="text-xs text-muted-foreground">Avec Tiffy, avance à ton rythme.</p></div>
+            <div className="min-w-0"><p className="truncate text-sm font-semibold">{conversation?.title || "Un nouvel espace pour tes idées"}</p><p className="text-xs text-muted-foreground">{chat.banterMode ? "Mode taquin · à toi de jouer !" : "Avec Tiffy, avance à ton rythme."}</p></div>
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Exporter les conversations" disabled={!chat.conversations.length}><Download className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem disabled={!conversation} onSelect={() => conversation && downloadConversations([conversation], "md")}>Cette conversation en Markdown</DropdownMenuItem><DropdownMenuItem disabled={!conversation} onSelect={() => conversation && downloadConversations([conversation], "json")}>Cette conversation en JSON</DropdownMenuItem><DropdownMenuItem onSelect={() => downloadConversations(chat.conversations, "json")}>Tout l’historique en JSON</DropdownMenuItem></DropdownMenuContent></DropdownMenu>

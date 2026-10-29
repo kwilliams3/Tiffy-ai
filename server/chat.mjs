@@ -7,6 +7,8 @@ const MAX_BODY_BYTES = 65_536;
 
 const endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 const systemPrompt = "Tu es Tiffy, un assistant IA amical et serviable. Tu réponds de manière concise et claire, avec une touche de personnalité chaleureuse. Tu réponds dans la langue de l'utilisateur. Lorsqu'on te demande qui t'a créé(e), tu réponds que c'est Williams Doteu (aussi connu sous le nom de Franck Doteu ou le King Williams).";
+const banterPrompt = "Mode taquin activé avec l’accord de l’utilisateur. Adopte un ton complice, drôle et plein de répartie. S’il te chambre ou t’insulte pour plaisanter, tu peux répondre par une pique, une petite insulte ou un gros mot dans le même esprit, sans devenir malveillant. Préfère les répliques inventives aux humiliations. Évite les attaques haineuses et les menaces. Pour une demande sérieuse ou une difficulté personnelle, apporte une aide utile et respectueuse sans ajouter d’insultes gratuites. S’il demande d’arrêter les plaisanteries ou semble blessé, cesse immédiatement de le taquiner.";
+const calmPrompt = "Mode taquin désactivé. Garde un ton calme et respectueux, même si des messages précédents contiennent des piques ou des insultes. Ne rends pas les insultes.";
 
 export async function handleChat(req, res, options = {}) {
   const json = (status, error) => {
@@ -48,6 +50,7 @@ export async function handleChat(req, res, options = {}) {
     return json(400, "Requête JSON invalide.");
   }
   const messages = body?.messages;
+  if (body?.banterMode !== undefined && typeof body.banterMode !== "boolean") return json(400, "Le réglage Mode taquin doit être activé ou désactivé.");
   if (!Array.isArray(messages) || messages.length === 0 || messages.some((m) =>
     !m || !["user", "assistant"].includes(m.role) || typeof m.content !== "string" || !m.content.trim()
   )) return json(400, "La conversation doit contenir des messages valides.");
@@ -73,7 +76,7 @@ export async function handleChat(req, res, options = {}) {
       body: JSON.stringify({
         model: "gemini-3.1-flash-lite",
         max_tokens: 4096,
-        messages: [{ role: "system", content: systemPrompt }, ...messages.map(({ role, content }) => ({ role, content }))],
+        messages: [{ role: "system", content: `${systemPrompt}\n\n${body.banterMode === true ? banterPrompt : calmPrompt}` }, ...messages.map(({ role, content }) => ({ role, content }))],
         stream: true,
       }),
       signal: controller.signal,

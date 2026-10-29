@@ -1,4 +1,5 @@
 import { readChatStream } from "./chat-stream.ts";
+import { loadBanterMode } from "./chat-preferences.ts";
 
 export interface Message {
   id: string;
@@ -8,7 +9,7 @@ export interface Message {
   error?: string;
 }
 export interface Conversation { id: string; title: string; messages: Message[]; created_at: string; updated_at: string }
-interface Snapshot { conversations: Conversation[]; currentConversationId: string | null; activeMessageId: string | null }
+interface Snapshot { conversations: Conversation[]; currentConversationId: string | null; activeMessageId: string | null; banterMode: boolean }
 type StorageLike = Pick<Storage, "getItem" | "setItem">;
 const key = "tiffy_conversations";
 
@@ -32,10 +33,12 @@ export class ChatStore {
   private fetcher: typeof fetch;
   private storage?: StorageLike;
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
-  constructor(options: { fetcher?: typeof fetch; storage?: StorageLike } = {}) {
+  private onComplete?: (conversationId: string) => void;
+  constructor(options: { fetcher?: typeof fetch; storage?: StorageLike; onComplete?: (conversationId: string) => void } = {}) {
     this.fetcher = options.fetcher ?? fetch;
     this.storage = options.storage;
-    this.snapshot = { conversations: loadConversations(options.storage), currentConversationId: null, activeMessageId: null };
+    this.onComplete = options.onComplete;
+    this.snapshot = { conversations: loadConversations(options.storage), currentConversationId: null, activeMessageId: null, banterMode: loadBanterMode(options.storage) };
   }
   getSnapshot = () => this.snapshot;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
@@ -59,11 +62,12 @@ export class ChatStore {
     if (this.active) return;
     const messageId = crypto.randomUUID();
     const run = { controller: new AbortController(), conversationId, messageId };
+    const banterMode = loadBanterMode(this.storage);
     this.active = run;
     const now = new Date().toISOString();
     const conversation = this.snapshot.conversations.find(c => c.id === conversationId);
     if (!conversation) { this.active = null; return; }
-    this.publish({ activeMessageId: messageId, conversations: [
+    this.publish({ activeMessageId: messageId, banterMode, conversations: [
       { ...conversation, updated_at: now, messages: [...prefix, { id: messageId, role: "assistant", content: "", status: "streaming" }] },
       ...this.snapshot.conversations.filter(c => c.id !== conversationId),
     ] });
@@ -72,12 +76,13 @@ export class ChatStore {
       this.update(conversationId, c => ({ ...c, messages: c.messages.map(m => m.id === messageId ? { ...m, ...patch } : m) }));
     };
     let content = "";
+    let completed = false;
     try {
       // Keep the full local history while bounding the context sent to Google.
       const outgoing = prefix.filter(m => m.content.trim()).slice(-40).map((m, index, all) => ({
         ...m, content: index < all.length - 1 ? m.content.slice(0, 12_000) : m.content,
       }));
-      const payload = () => JSON.stringify({ messages: outgoing.map(({ role, content }) => ({ role, content })) });
+      const payload = () => JSON.stringify({ messages: outgoing.map(({ role, content }) => ({ role, content })), banterMode });
       while (outgoing.length > 1 && (outgoing[0].role !== "user" || outgoing.reduce((n, m) => n + m.content.length, 0) > 40_000 || new TextEncoder().encode(payload()).length > 60_000)) outgoing.shift();
       const response = await this.fetcher("/api/chat", {
         method: "POST", headers: { "Content-Type": "application/json" }, signal: run.controller.signal,
@@ -85,10 +90,15 @@ export class ChatStore {
       });
       await readChatStream(response, text => { content += text; changeMessage({ content }); }, run.controller.signal);
       changeMessage({ status: "complete" });
+      completed = this.active === run;
     } catch (error) {
       changeMessage({ status: run.controller.signal.aborted ? "stopped" : "error", error: run.controller.signal.aborted ? undefined : error instanceof Error ? error.message : "Une erreur est survenue. Réessaie." });
     } finally {
-      if (this.active === run) { this.active = null; this.publish({ activeMessageId: null }); }
+      if (this.active === run) {
+        this.active = null;
+        this.publish({ activeMessageId: null });
+        if (completed) { try { this.onComplete?.(conversationId); } catch { /* Alerts must not affect the reply. */ } }
+      }
     }
   }
   sendMessage = async (content: string) => {

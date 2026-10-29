@@ -4,6 +4,10 @@ import { ChatStore, loadConversations } from "../src/lib/chat-store.ts";
 import { serializeConversations } from "../src/lib/chat-export.ts";
 import { highlightCode } from "../src/lib/code-highlight.ts";
 import { readChatStream } from "../src/lib/chat-stream.ts";
+import { loadBanterMode, saveBanterMode, loadReplyPreferences, saveReplyPreference } from "../src/lib/chat-preferences.ts";
+import { deliverReplyAlerts, notificationPermission, supportsReplySound, prepareReplySound, playReplySound, requestReplyNotifications, showReplyNotification } from "../src/lib/response-alerts.ts";
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 
 const event = text => `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`;
 const reply = (text = "Bonjour 🌿") => new Response(event(text) + "data: [DONE]\n\n", { headers: { "Content-Type": "text/event-stream" } });
@@ -152,4 +156,199 @@ test("switching conversations stops generation and deletion cannot revive a resp
   store.deleteConversation(id);
   resolve(reply()); await pending;
   assert.equal(store.getSnapshot().conversations.length, 0);
+});
+
+test("banter is opt-in, survives reload and does not modify the conversation storage", () => {
+  const data = new Map([["tiffy_conversations", "[]"], ["tiffy_preferences", JSON.stringify({ otherPreference: "kept" })]]);
+  const storage = { getItem: name => data.get(name) ?? null, setItem: (name, value) => data.set(name, value) };
+  assert.equal(loadBanterMode(storage), false);
+  saveBanterMode(storage, true);
+  assert.equal(new ChatStore({ storage }).getSnapshot().banterMode, true);
+  assert.equal(JSON.parse(data.get("tiffy_preferences")).otherPreference, "kept");
+  assert.equal(data.get("tiffy_conversations"), "[]");
+  saveBanterMode(storage, false);
+  assert.equal(loadBanterMode(storage), false);
+  data.set("tiffy_preferences", '{"banterMode":"true"}');
+  assert.equal(loadBanterMode(storage), false);
+});
+
+test("the latest personality setting is sent on new messages, retries and edits", async () => {
+  const data = new Map();
+  const storage = { getItem: name => data.get(name) ?? null, setItem: (name, value) => data.set(name, value) };
+  const sent = [];
+  const store = new ChatStore({ storage, fetcher: async (_url, init) => { sent.push(JSON.parse(init.body)); return reply(); } });
+  await store.sendMessage("Bonjour");
+  assert.equal(sent.at(-1).banterMode, false);
+  saveBanterMode(storage, true);
+  await store.retryMessage(last(store).id);
+  assert.equal(sent.at(-1).banterMode, true);
+  assert.equal(store.getSnapshot().banterMode, true);
+  saveBanterMode(storage, false);
+  await store.editMessage(store.getSnapshot().conversations[0].messages[0].id, "Question sérieuse");
+  assert.equal(sent.at(-1).banterMode, false);
+});
+
+test("notification and sound preferences are independent and preserve the chosen personality", () => {
+  const data = new Map();
+  const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) };
+  assert.deepEqual(loadReplyPreferences(storage), { notifications: false, sounds: false });
+  saveBanterMode(storage, true);
+  saveReplyPreference(storage, "notifications", true);
+  saveReplyPreference(storage, "sounds", true);
+  assert.equal(loadBanterMode(storage), true);
+  saveReplyPreference(storage, "notifications", false);
+  assert.deepEqual(loadReplyPreferences(storage), { notifications: false, sounds: true });
+  data.set("tiffy_preferences", "broken");
+  assert.deepEqual(loadReplyPreferences(storage), { notifications: false, sounds: false });
+});
+
+test("only a successfully completed reply emits one completion event", async () => {
+  const completed = [];
+  const store = new ChatStore({ fetcher: async () => reply(), onComplete: id => completed.push(id) });
+  await store.sendMessage("Question");
+  assert.deepEqual(completed, [store.getSnapshot().currentConversationId]);
+  const errors = new ChatStore({ fetcher: async () => Response.json({ error: "Failed" }, { status: 500 }), onComplete: id => completed.push(id) });
+  await errors.sendMessage("Question");
+  const truncated = new ChatStore({ fetcher: async () => new Response(event("Partial"), { headers: { "Content-Type": "text/event-stream" } }), onComplete: id => completed.push(id) });
+  await truncated.sendMessage("Question");
+  assert.equal(completed.length, 1);
+});
+
+test("a stopped or obsolete request cannot trigger an alert", async () => {
+  const completed = [];
+  let resolve;
+  const store = new ChatStore({ fetcher: async () => new Promise(done => { resolve = done; }), onComplete: id => completed.push(id) });
+  const pending = store.sendMessage("Question");
+  store.stopResponse();
+  resolve(reply()); await pending;
+  assert.deepEqual(completed, []);
+});
+
+test("a notification failure does not mark the answer as failed", async () => {
+  const store = new ChatStore({ fetcher: async () => reply(), onComplete: () => { throw new Error("Notification blocked"); } });
+  await store.sendMessage("Question");
+  assert.equal(last(store).status, "complete");
+  assert.equal(store.getSnapshot().activeMessageId, null);
+});
+
+test("alerts require preferences and notification permission; foreground replies only sound", async () => {
+  const data = new Map();
+  const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) };
+  let sounds = 0, hidden = true, permission = "granted";
+  const notifications = [];
+  const platform = { isHidden: () => hidden, permission: () => permission, notify: async id => notifications.push(id), playSound: () => { sounds++; } };
+  await deliverReplyAlerts("private-conversation-id", storage, platform);
+  assert.equal(sounds, 0); assert.equal(notifications.length, 0);
+  saveReplyPreference(storage, "notifications", true); saveReplyPreference(storage, "sounds", true);
+  await deliverReplyAlerts("private-conversation-id", storage, platform);
+  assert.equal(sounds, 1); assert.deepEqual(notifications, ["private-conversation-id"]);
+  hidden = false;
+  await deliverReplyAlerts("other", storage, platform);
+  assert.equal(sounds, 2); assert.equal(notifications.length, 1);
+  hidden = true; permission = "denied";
+  await deliverReplyAlerts("other", storage, platform);
+  assert.equal(notifications.length, 1);
+  saveReplyPreference(storage, "sounds", false);
+  await deliverReplyAlerts("other", storage, platform);
+  assert.equal(sounds, 3);
+});
+
+test("blocked audio or notification APIs do not reject completion handling", async () => {
+  const storage = { getItem: () => '{"notifications":true,"sounds":true}', setItem() {} };
+  await deliverReplyAlerts("c", storage, { isHidden: () => true, permission: () => "granted", notify: async () => { throw new Error("denied"); }, playSound: () => { throw new Error("blocked"); } });
+  assert.equal(notificationPermission(), "unsupported");
+  assert.equal(supportsReplySound(), false);
+  assert.equal(await prepareReplySound(), false);
+});
+
+test("notification clicks focus the application and open the correct local conversation", async () => {
+  const source = readFileSync(new URL("../public/notification-events.js", import.meta.url), "utf8");
+  let handler, destination, focused = false, closed = false, work;
+  const client = { url: "https://tiffy.example/", navigate: async url => { destination = url; }, focus: async () => { focused = true; } };
+  const self = { location: { origin: "https://tiffy.example" }, clients: { matchAll: async () => [client] }, addEventListener: (_name, callback) => { handler = callback; } };
+  runInNewContext(source, { self, URL });
+  handler({ notification: { tag: "tiffy-reply-test", data: { conversationId: "a/b?c" }, close: () => { closed = true; } }, waitUntil: promise => { work = promise; } });
+  await work;
+  assert.equal(new URL(destination).origin, "https://tiffy.example");
+  assert.equal(new URL(destination).searchParams.get("conversation"), "a/b?c");
+  assert.equal(focused, true); assert.equal(closed, true);
+});
+
+test("notification clicks can reopen Tiffy if no existing window remains", async () => {
+  const source = readFileSync(new URL("../public/notification-events.js", import.meta.url), "utf8");
+  let handler, destination, work;
+  const self = { location: { origin: "https://tiffy.example" }, clients: { matchAll: async () => [], openWindow: async url => { destination = url; } }, addEventListener: (_name, callback) => { handler = callback; } };
+  runInNewContext(source, { self, URL });
+  handler({ notification: { tag: "tiffy-reply-test", data: { conversationId: "c" }, close() {} }, waitUntil: promise => { work = promise; } });
+  await work;
+  assert.equal(destination, "https://tiffy.example/?conversation=c");
+});
+
+test("browser notifications request permission only when needed and prefer the mobile-compatible worker", async () => {
+  const descriptors = new Map(["window", "navigator", "Notification"].map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
+  let requested = 0, directNotifications = 0;
+  const shown = [];
+  class FakeNotification {
+    static permission = "default";
+    static async requestPermission() { requested++; this.permission = "granted"; return "granted"; }
+    constructor() { directNotifications++; }
+  }
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { isSecureContext: true, Notification: FakeNotification } });
+  Object.defineProperty(globalThis, "Notification", { configurable: true, value: FakeNotification });
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: { serviceWorker: { getRegistration: async () => ({ active: {}, showNotification: async (title, options) => { shown.push({ title, options }); } }) } } });
+  try {
+    assert.equal(notificationPermission(), "default");
+    assert.equal(requested, 0);
+    assert.equal(await requestReplyNotifications(), "granted");
+    assert.equal(await requestReplyNotifications(), "granted");
+    assert.equal(requested, 1);
+    await showReplyNotification("conversation-id");
+    assert.equal(shown.length, 1);
+    assert.equal(shown[0].options.data.conversationId, "conversation-id");
+    assert.equal(shown[0].options.silent, true);
+    assert.equal(directNotifications, 0);
+    FakeNotification.permission = "denied";
+    assert.equal(await requestReplyNotifications(), "denied");
+    await showReplyNotification("other");
+    assert.equal(shown.length, 1); assert.equal(requested, 1);
+  } finally {
+    for (const [name, descriptor] of descriptors) {
+      if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+      else delete globalThis[name];
+    }
+  }
+});
+
+test("reply sound is primed explicitly and plays a short two-note chime", async () => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const contexts = [], frequencies = [], starts = [], stops = [];
+  let rejectResume = false;
+  class FakeAudioContext {
+    state = "suspended";
+    currentTime = 5;
+    destination = {};
+    constructor() { contexts.push(this); }
+    async resume() { if (rejectResume) throw new Error("blocked"); this.state = "running"; }
+    createOscillator() { return { frequency: { setValueAtTime: value => frequencies.push(value) }, connect() {}, disconnect() {}, start: time => starts.push(time), stop(time) { stops.push(time); this.onended?.(); } }; }
+    createGain() { return { gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {}, disconnect() {} }; }
+  }
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { AudioContext: FakeAudioContext } });
+  try {
+    assert.equal(supportsReplySound(), true);
+    assert.equal(contexts.length, 0);
+    assert.equal(await prepareReplySound(), true);
+    playReplySound();
+    assert.deepEqual(frequencies, [587.33, 783.99]);
+    assert.equal(starts.length, 2);
+    assert.ok(stops.every((stop, index) => stop > starts[index] && stop - starts[index] < 0.3));
+    assert.equal(await prepareReplySound(), true);
+    assert.equal(contexts.length, 1);
+    contexts[0].state = "closed"; rejectResume = true;
+    assert.equal(await prepareReplySound(), false);
+    playReplySound();
+    assert.equal(frequencies.length, 2);
+  } finally {
+    if (previous) Object.defineProperty(globalThis, "window", previous);
+    else delete globalThis.window;
+  }
 });

@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "tiffy-logo.svg", "tiffy-icon-192.png", "tiffy-icon-512.png"],
+      includeAssets: ["favicon.ico", "tiffy-logo.svg", "tiffy-icon-192.png", "tiffy-icon-512.png", "notification-events.js"],
       manifest: {
         name: "Tiffy - Assistant IA",
         short_name: "Tiffy",
@@ -51,6 +51,7 @@ export default defineConfig(({ mode }) => {
         ]
       },
       workbox: {
+        importScripts: ["/notification-events.js"],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [
           {
