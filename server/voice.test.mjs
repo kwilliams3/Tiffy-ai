@@ -46,6 +46,15 @@ test("discussion stops on microphone and model failures without restarting", asy
   failed.discussion.start(); failed.text("Bonjour"); failed.end(); await Promise.resolve(); await Promise.resolve();
   assert.equal(failed.discussion.getSnapshot(), "off"); assert.equal(failed.errors.length, 1);
 });
+
+test("pausing discussion cancels the turn and resumes with a fresh microphone session", async () => {
+  const h = discussionHarness();
+  h.discussion.start(); h.text("Brouillon abandonné"); h.discussion.pause();
+  assert.equal(h.discussion.getSnapshot(), "paused");
+  assert.equal(h.events.includes("Brouillon abandonné"), false);
+  h.discussion.start(); assert.equal(h.discussion.getSnapshot(), "listening");
+  h.discussion.stop(); assert.equal(h.discussion.getSnapshot(), "off");
+});
 import { SpeechPlayback, speechChunks, speechText } from "../src/lib/speech-playback.ts";
 import { loadAutoSpeak, saveAutoSpeak, loadBanterMode, saveBanterMode } from "../src/lib/chat-preferences.ts";
 

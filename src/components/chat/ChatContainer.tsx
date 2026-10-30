@@ -4,6 +4,7 @@ import { Menu, Plus, Settings, ArrowUpRight, Feather, Lightbulb, Compass, Code2,
 import { Button } from "@/components/ui/button";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
+import { VoiceDiscussion } from "./VoiceDiscussion";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { downloadConversations } from "@/lib/chat-export";
 import { ConversationSidebar } from "./ConversationSidebar";
@@ -29,6 +30,7 @@ export function ChatContainer() {
 
   return (
     <div className="app-shell">
+      <VoiceDiscussion state={chat.discussionState} onClose={chat.stopResponse} onPause={chat.pauseDiscussion} onResume={chat.resumeDiscussion} reply={chat.messages.filter(message => message.role === "assistant").at(-1)?.content} />
       <ConversationSidebar conversations={chat.conversations} currentConversationId={chat.currentConversationId}
         isLoading={chat.isLoadingConversations} isOpen={sidebarOpen} onClose={closeSidebar}
         onSelect={id => { chat.selectConversation(id); setSidebarOpen(false); }}

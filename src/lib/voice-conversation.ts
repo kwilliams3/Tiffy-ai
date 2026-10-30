@@ -1,6 +1,6 @@
 import type { VoiceInput } from "./voice-input.ts";
 
-export type DiscussionState = "off" | "listening" | "thinking" | "speaking";
+export type DiscussionState = "off" | "paused" | "listening" | "thinking" | "speaking";
 interface Ports {
   voice: Pick<VoiceInput, "start" | "stop" | "abort">;
   ask: (text: string) => Promise<{ id: string; content: string } | undefined>;
@@ -25,6 +25,7 @@ export class VoiceConversation {
     this.publish("off"); this.ports.voice.abort(); this.ports.cancel();
   };
   start = () => { this.stop(); this.listen(this.generation); };
+  pause = () => { this.stop(); this.publish("paused"); };
   private fail(message: string) { this.stop(); this.ports.error(message); }
   private listen(generation: number) {
     if (generation !== this.generation) return;

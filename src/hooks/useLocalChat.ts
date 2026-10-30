@@ -53,6 +53,8 @@ export function useLocalChat() {
   const current = state.conversations.find(c => c.id === state.currentConversationId);
   return {
     discussionState,
+    pauseDiscussion: discussion.pause,
+    resumeDiscussion: discussion.start,
     toggleDiscussion: () => { if (discussion.getSnapshot() !== "off") discussion.stop(); else { speechPlayback.prepare(); discussion.start(); } },
     ...state, messages: current?.messages || [], isLoading: !!state.activeMessageId, isLoadingConversations: false,
     sendMessage: (content: string) => { discussion.stop(); speechPlayback.stop(); speechPlayback.prepare(); unlockSound(); return store.sendMessage(content); },
