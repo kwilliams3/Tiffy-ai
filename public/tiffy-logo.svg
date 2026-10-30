@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
   <title>Tiffy</title>
-  <rect width="64" height="64" rx="19" fill="#263e30"/>
-  <path d="M27 17 36 13V25H46V33H36V42Q36 47 41 47H46V55H40Q27 55 27 42V33H19V25H27Z" fill="#faf7ec"/>
-  <path d="M48 8Q48 16 56 16Q48 16 48 24Q48 16 40 16Q48 16 48 8Z" fill="#c7d7a8"/>
+  <defs><linearGradient id="tiffy" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#7c3aed"/><stop offset="1" stop-color="#2563eb"/></linearGradient></defs>
+  <rect width="64" height="64" rx="19" fill="url(#tiffy)"/>
+  <path d="M27 17 36 13V25H46V33H36V42Q36 47 41 47H46V55H40Q27 55 27 42V33H19V25H27Z" fill="#ffffff"/>
+  <path d="M48 8Q48 16 56 16Q48 16 48 24Q48 16 40 16Q48 16 48 8Z" fill="#bfdbfe"/>
 </svg>
