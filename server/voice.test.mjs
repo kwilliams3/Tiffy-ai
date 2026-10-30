@@ -1,6 +1,51 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { VoiceInput } from "../src/lib/voice-input.ts";
+import { VoiceConversation } from "../src/lib/voice-conversation.ts";
+
+function discussionHarness(ask = async () => ({ id: "reply", content: "Bonjour" })) {
+  let callbacks, done;
+  const events = [], errors = [];
+  const voice = {
+    start(text, error, listening) { callbacks = { text, error, listening }; listening(true); events.push("listen"); },
+    stop() { events.push("mic-stop"); callbacks.listening(false); },
+    abort() { events.push("abort"); callbacks?.listening(false); },
+  };
+  const discussion = new VoiceConversation({ voice, ask: text => { events.push(text); return ask(text); },
+    speak(id, text, fail, end) { events.push("speak"); done = end; return true; },
+    cancel() { events.push("cancel"); }, error: text => errors.push(text) });
+  return { discussion, events, errors, text: text => callbacks.text(text), end: () => callbacks.listening(false), done: () => done(), fail: () => callbacks.error("Micro refusé") };
+}
+test("discussion sends after silence, speaks once and reopens the microphone", async context => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = discussionHarness();
+  h.discussion.start(); h.text("Salut");
+  context.mock.timers.tick(1000); assert.equal(h.discussion.getSnapshot(), "listening");
+  h.text("Salut Tiffy"); context.mock.timers.tick(1400);
+  assert.equal(h.discussion.getSnapshot(), "thinking");
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(h.discussion.getSnapshot(), "speaking");
+  assert.equal(h.events.filter(x => x === "Salut Tiffy").length, 1);
+  h.done(); assert.equal(h.discussion.getSnapshot(), "listening");
+  h.discussion.stop(); assert.equal(h.discussion.getSnapshot(), "off");
+});
+test("stopping discussion ignores late model replies and speech callbacks", async () => {
+  let resolve;
+  const h = discussionHarness(() => new Promise(r => { resolve = r; }));
+  h.discussion.start(); h.text("Bonjour"); h.end(); h.discussion.stop();
+  resolve({ id: "late", content: "Réponse" }); await Promise.resolve(); await Promise.resolve();
+  assert.equal(h.discussion.getSnapshot(), "off"); assert.equal(h.events.includes("speak"), false);
+  const second = discussionHarness(); second.discussion.start(); second.text("Salut"); second.end();
+  await Promise.resolve(); await Promise.resolve(); second.discussion.stop(); second.done();
+  assert.equal(second.discussion.getSnapshot(), "off");
+});
+test("discussion stops on microphone and model failures without restarting", async () => {
+  const h = discussionHarness(); h.discussion.start(); h.fail();
+  assert.equal(h.discussion.getSnapshot(), "off"); assert.equal(h.errors.length, 1);
+  const failed = discussionHarness(async () => undefined);
+  failed.discussion.start(); failed.text("Bonjour"); failed.end(); await Promise.resolve(); await Promise.resolve();
+  assert.equal(failed.discussion.getSnapshot(), "off"); assert.equal(failed.errors.length, 1);
+});
 import { SpeechPlayback, speechChunks, speechText } from "../src/lib/speech-playback.ts";
 import { loadAutoSpeak, saveAutoSpeak, loadBanterMode, saveBanterMode } from "../src/lib/chat-preferences.ts";
 

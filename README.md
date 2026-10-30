@@ -94,3 +94,14 @@ npm run build
 ```
 
 Les tests API utilisent des réponses Gemini simulées et ne nécessitent aucune clé.
+# Discussion vocale
+
+Le bouton « Discussion vocale » active un échange mains libres : parole transcrite,
+envoi automatique après environ 1,4 seconde de silence, réponse de Tiffy puis
+lecture vocale, et réouverture du micro. « Quitter la discussion » arrête le micro,
+la génération et la lecture. Le mode s’arrête aussi lorsque l’onglet est masqué.
+Les échanges restent dans l’historique. Il faut autoriser le micro sur un navigateur
+compatible en HTTPS. Le service de dictée du navigateur peut traiter la voix à distance.
+La réponse vocale commence une fois le texte généré : ce mode fonctionne par tours
+de parole, avec un délai dépendant du réseau, sans interruption vocale simultanée.
+

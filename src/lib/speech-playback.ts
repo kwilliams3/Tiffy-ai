@@ -38,7 +38,7 @@ export class SpeechPlayback {
     try { this.factory()?.synth.cancel(); } catch { /* No speech engine available. */ }
   };
   prepare = () => { try { this.factory()?.synth.resume(); } catch { /* Manual playback remains available. */ } };
-  play(id: string, text: string, onError?: () => void): boolean {
+  play(id: string, text: string, onError?: () => void, onDone?: () => void): boolean {
     voiceInput.abort();
     this.stop();
     const platform = this.factory();
@@ -50,7 +50,7 @@ export class SpeechPlayback {
     const fail = () => { if (version !== this.version) return; this.stop(); onError?.(); };
     const next = () => {
       if (version !== this.version) return;
-      if (index >= chunks.length) { this.publish(null); return; }
+      if (index >= chunks.length) { this.publish(null); onDone?.(); return; }
       try {
         const utterance = new platform.Utterance(chunks[index++]);
         utterance.lang = "fr-FR"; utterance.rate = 1; utterance.pitch = 1;

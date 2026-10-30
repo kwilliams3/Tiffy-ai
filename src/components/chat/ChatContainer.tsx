@@ -72,7 +72,7 @@ export function ChatContainer() {
           )}
           <div ref={endRef} />
         </div>
-        <footer className="composer-footer"><ChatInput onSend={chat.sendMessage} isLoading={chat.isLoading} onStop={chat.stopResponse} /></footer>
+        <footer className="composer-footer"><ChatInput discussionState={chat.discussionState} onToggleDiscussion={chat.toggleDiscussion} onSend={chat.sendMessage} isLoading={chat.isLoading} onStop={chat.stopResponse} /></footer>
       </main>
     </div>
   );
