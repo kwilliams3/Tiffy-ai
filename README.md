@@ -111,3 +111,9 @@ compatible en HTTPS. Le service de dictée du navigateur peut traiter la voix à
 La réponse vocale commence une fois le texte généré : ce mode fonctionne par tours
 de parole, avec un délai dépendant du réseau, sans interruption vocale simultanée.
 
+# Applications mobiles
+
+Le projet Android Capacitor est dans `mobile/android`. Les commandes de préparation
+Android/iOS, la compilation de l’APK de test sur GitHub Actions, les prérequis et les
+limites de validation sont décrits dans [mobile/README.md](mobile/README.md).
+

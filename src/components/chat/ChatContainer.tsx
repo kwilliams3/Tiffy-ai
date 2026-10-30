@@ -22,11 +22,13 @@ export function ChatContainer() {
   const navigate = useNavigate();
   const chat = useLocalChat();
   const endRef = useRef<HTMLDivElement>(null);
+  const followMessages = useRef(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const conversation = chat.conversations.find(c => c.id === chat.currentConversationId);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }, [chat.messages]);
+  useEffect(() => { if (!followMessages.current) return; endRef.current?.scrollIntoView({ behavior: chat.isLoading || import.meta.env.MODE === "mobile" ? "auto" : window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }, [chat.messages, chat.isLoading]);
+  useEffect(() => { followMessages.current = true; endRef.current?.scrollIntoView({ behavior: "auto" }); }, [chat.currentConversationId]);
 
   return (
     <div className="app-shell">
@@ -49,7 +51,7 @@ export function ChatContainer() {
             <Button variant="ghost" size="icon" aria-label="Paramètres" onClick={() => navigate("/settings")}><Settings className="h-4 w-4" /></Button>
           </div>
         </header>
-        <div className="chat-scroll">
+        <div className="chat-scroll" onScroll={event => { const el = event.currentTarget; followMessages.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }}>
           {chat.messages.length === 0 ? (
             <section className="welcome animate-slide-up">
               <div className="welcome-kicker"><span className="tiny-star">✳</span> TON QUOTIDIEN, UN PEU PLUS SIMPLE</div>

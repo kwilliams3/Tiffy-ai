@@ -7,7 +7,10 @@ export interface Recognizer {
   start: () => void; stop: () => void; abort: () => void;
 }
 type Constructor = new () => Recognizer;
+let nativeConstructor: Constructor | undefined;
+export function configureNativeRecognition(constructor: Constructor) { nativeConstructor = constructor; }
 export function recognitionConstructor(): Constructor | undefined {
+  if (nativeConstructor) return nativeConstructor;
   if (typeof window === "undefined" || !window.isSecureContext) return undefined;
   const browser = window as unknown as { SpeechRecognition?: Constructor; webkitSpeechRecognition?: Constructor };
   return browser.SpeechRecognition || browser.webkitSpeechRecognition;

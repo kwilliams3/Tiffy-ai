@@ -17,8 +17,11 @@ export function speechChunks(text: string, limit = 220): string[] {
   if (remaining) chunks.push(remaining);
   return chunks;
 }
-interface SpeechPlatform { synth: SpeechSynthesis; Utterance: typeof SpeechSynthesisUtterance }
+export interface SpeechPlatform { synth: SpeechSynthesis; Utterance: typeof SpeechSynthesisUtterance }
+let nativePlatform: SpeechPlatform | undefined;
+export function configureNativeSpeech(platform: SpeechPlatform) { nativePlatform = platform; }
 function browserPlatform(): SpeechPlatform | undefined {
+  if (nativePlatform) return nativePlatform;
   if (typeof window === "undefined" || !("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return undefined;
   return { synth: window.speechSynthesis, Utterance: window.SpeechSynthesisUtterance };
 }

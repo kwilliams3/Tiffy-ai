@@ -286,3 +286,8 @@
 .voice-screen-error { max-width: 440px; margin-top: 18px; padding: 16px; background: #342021; border: 1px solid #714144; border-radius: 16px; color: #ffd6d6; text-align: center; font-size: 14px; line-height: 1.6; }
 .voice-screen-error button { margin-top: 12px; padding: 8px 16px; background: #fff; border-radius: 20px; color: #222; }
 .voice-send-turn { margin-top: 12px; padding: 8px 18px; border: 1px solid #526ba4; border-radius: 24px; background: #172442; color: #dce7ff; font-size: 13px; }
+.native-mobile .app-shell { height: var(--app-height, 100dvh); }
+.native-mobile .workspace-header { padding-top: max(12px, env(safe-area-inset-top)); }
+.native-mobile .composer-footer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.native-mobile .chat-scroll { overscroll-behavior-y: contain; overflow-anchor: auto; }
+.native-mobile .voice-screen { height: var(--app-height, 100dvh); }

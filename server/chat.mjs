@@ -15,12 +15,20 @@ export async function handleChat(req, res, options = {}) {
     res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
     res.end(JSON.stringify({ error }));
   };
+  const origin = req.headers.origin;
+  const nativeOrigin = ["https://localhost", "capacitor://localhost"].includes(origin);
+  if (nativeOrigin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }
+  }
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return json(405, "Méthode non autorisée.");
   }
-  const origin = req.headers.origin;
-  if (origin) {
+  if (origin && !nativeOrigin) {
     try { if (new URL(origin).host !== req.headers.host) return json(403, "Cette requête doit provenir de l’application Tiffy."); }
     catch { return json(403, "Origine de la requête invalide."); }
   }

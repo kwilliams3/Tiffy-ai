@@ -5,6 +5,7 @@ import { test } from "node:test";
 import { handleChat } from "./chat.mjs";
 import vercelHandler from "../api/chat.mjs";
 import { getChatError } from "../src/lib/chat-errors.ts";
+import { chatApiUrl } from "../src/lib/api-url.ts";
 import { createRateLimiter, clientAddress } from "./rate-limit.mjs";
 
 async function withServer(options, callback) {
@@ -17,6 +18,26 @@ async function withServer(options, callback) {
 }
 const post = (url, body = { messages: [{ role: "user", content: "Bonjour" }] }) =>
   fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+test("mobile API URL uses HTTPS and web requests remain same-origin", () => {
+  assert.equal(chatApiUrl(""), "/api/chat");
+  assert.equal(chatApiUrl("https://spark-my-ai.vercel.app"), "https://spark-my-ai.vercel.app/api/chat");
+  for (const url of ["http://example.com", "https://user:pass@example.com", "https://example.com/path", "https://example.com?token=x"]) assert.throws(() => chatApiUrl(url));
+});
+
+test("only native localhost origins get CORS preflight and response headers", async () => {
+  await withServer({ apiKey: "" }, async url => {
+    for (const origin of ["https://localhost", "capacitor://localhost"]) {
+      const preflight = await fetch(url, { method: "OPTIONS", headers: { Origin: origin, "Access-Control-Request-Method": "POST" } });
+      assert.equal(preflight.status, 204);
+      assert.equal(preflight.headers.get("access-control-allow-origin"), origin);
+      const response = await fetch(url, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: "Bonjour" }] }) });
+      assert.equal(response.status, 503); assert.equal(response.headers.get("access-control-allow-origin"), origin);
+    }
+    const denied = await fetch(url, { method: "OPTIONS", headers: { Origin: "https://localhost.evil.example" } });
+    assert.equal(denied.headers.get("access-control-allow-origin"), null);
+  });
+});
 
 test("streams Gemini responses through the application API", async () => {
   const stream = 'data: {"choices":[{"delta":{"content":"Bonjour"}}]}\n\ndata: [DONE]\n\n';

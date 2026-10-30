@@ -8,6 +8,13 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+mobile/android/.gradle/
+mobile/android/**/build/
+mobile/android/local.properties
+mobile/ios/App/Pods/
+mobile/ios/App/build/
+*.jks
+*.keystore
 dist
 dist-ssr
 *.offline.zip

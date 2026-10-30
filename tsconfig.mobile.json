@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@capacitor/core": ["./mobile/node_modules/@capacitor/core"],
+      "@capacitor-community/text-to-speech": ["./mobile/node_modules/@capacitor-community/text-to-speech"],
+      "@capgo/capacitor-speech-recognition": ["./mobile/node_modules/@capgo/capacitor-speech-recognition"]
+    }
+  },
+  "include": ["src"],
+  "exclude": []
+}

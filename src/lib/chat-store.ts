@@ -1,4 +1,5 @@
 import { readChatStream } from "./chat-stream.ts";
+import { chatApiUrl } from "./api-url.ts";
 import { loadBanterMode } from "./chat-preferences.ts";
 
 export interface Message {
@@ -85,7 +86,7 @@ export class ChatStore {
       }));
       const payload = () => JSON.stringify({ messages: outgoing.map(({ role, content }) => ({ role, content })), banterMode });
       while (outgoing.length > 1 && (outgoing[0].role !== "user" || outgoing.reduce((n, m) => n + m.content.length, 0) > 40_000 || new TextEncoder().encode(payload()).length > 60_000)) outgoing.shift();
-      const response = await this.fetcher("/api/chat", {
+      const response = await this.fetcher(chatApiUrl(), {
         method: "POST", headers: { "Content-Type": "application/json" }, signal: run.controller.signal,
         body: payload(),
       });

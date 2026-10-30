@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Tiffy</string>
+    <string name="title_activity_main">Tiffy</string>
+    <string name="package_name">com.kwilliams.tiffy</string>
+    <string name="custom_url_scheme">com.kwilliams.tiffy</string>
+</resources>

@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
   const backendPort = Number(process.env.BACKEND_PORT || env.BACKEND_PORT || 4317);
   const proxy = { "/api": { target: `http://127.0.0.1:${backendPort}` } };
   return {
+  define: mode === "mobile" ? { "import.meta.env.VITE_API_BASE_URL": JSON.stringify(process.env.VITE_API_BASE_URL || "https://spark-my-ai.vercel.app") } : {},
   server: {
     host: "::",
     port: frontendPort,
@@ -23,6 +24,7 @@ export default defineConfig(({ mode }) => {
   plugins: [
     react(),
     VitePWA({
+      disable: mode === "mobile",
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "tiffy-logo.svg", "tiffy-icon-192.png", "tiffy-icon-512.png", "notification-events.js"],
       manifest: {
@@ -75,6 +77,12 @@ export default defineConfig(({ mode }) => {
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@tiffy/platform": path.resolve(__dirname, mode === "mobile" ? "./src/platform.mobile.ts" : "./src/platform.web.ts"),
+      ...(mode === "mobile" ? {
+        "@capacitor/core": path.resolve(__dirname, "mobile/node_modules/@capacitor/core"),
+        "@capacitor-community/text-to-speech": path.resolve(__dirname, "mobile/node_modules/@capacitor-community/text-to-speech"),
+        "@capgo/capacitor-speech-recognition": path.resolve(__dirname, "mobile/node_modules/@capgo/capacitor-speech-recognition"),
+      } : {}),
     },
   },
   };
