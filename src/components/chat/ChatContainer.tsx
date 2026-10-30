@@ -30,7 +30,7 @@ export function ChatContainer() {
 
   return (
     <div className="app-shell">
-      <VoiceDiscussion onSendTurn={chat.sendDiscussionTurn} error={chat.discussionError} transcript={chat.discussionTranscript} state={chat.discussionState} onClose={chat.stopResponse} onPause={chat.pauseDiscussion} onResume={chat.resumeDiscussion} reply={chat.messages.filter(message => message.role === "assistant").at(-1)?.content} />
+      <VoiceDiscussion pendingReply={chat.isLoading ? chat.messages.at(-1)?.content : undefined} onSendTurn={chat.sendDiscussionTurn} error={chat.discussionError} transcript={chat.discussionTranscript} state={chat.discussionState} onClose={chat.stopResponse} onPause={chat.pauseDiscussion} onResume={chat.resumeDiscussion} reply={chat.messages.filter(message => message.role === "assistant").at(-1)?.content} />
       <ConversationSidebar conversations={chat.conversations} currentConversationId={chat.currentConversationId}
         isLoading={chat.isLoadingConversations} isOpen={sidebarOpen} onClose={closeSidebar}
         onSelect={id => { chat.selectConversation(id); setSidebarOpen(false); }}

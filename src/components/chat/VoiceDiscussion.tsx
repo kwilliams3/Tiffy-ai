@@ -11,15 +11,23 @@ interface Props {
   reply?: string;
   error?: string;
   transcript?: string;
+  pendingReply?: string;
 }
 const labels: Record<DiscussionState, string> = {
   off: "", paused: "Micro en pause", listening: "Je t’écoute", thinking: "Un instant…", speaking: "Tiffy te répond",
 };
 
-export function VoiceDiscussion({ state, onClose, onPause, onResume, onSendTurn, reply, error, transcript }: Props) {
+export function VoiceDiscussion({ state, onClose, onPause, onResume, onSendTurn, reply, error, transcript, pendingReply }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [captions, setCaptions] = useState(false);
   const [help, setHelp] = useState(false);
+  const [waiting, setWaiting] = useState(false);
+  useEffect(() => {
+    setWaiting(false);
+    if (state !== "thinking") return;
+    const timer = setTimeout(() => setWaiting(true), 5000);
+    return () => clearTimeout(timer);
+  }, [state]);
   const active = state !== "off";
   useEffect(() => {
     const element = dialog.current;
@@ -37,7 +45,8 @@ export function VoiceDiscussion({ state, onClose, onPause, onResume, onSendTurn,
       {help && <div className="voice-screen-help">Parle naturellement, puis marque une pause pour envoyer. Tiffy répond et te redonne la parole. Le bouton micro met l’échange en pause. La voix dépend de ton navigateur.</div>}
       <div className={`voice-stage voice-stage-${state}`}>
         <div className="voice-orb" aria-hidden="true"><div className="voice-orb-cloud" /><div className="voice-orb-light" /></div>
-        <p className="voice-stage-status" role="status">{labels[state]}</p>
+        <p className="voice-stage-status" role="status">{state === "thinking" && waiting ? "J’attends la réponse de Tiffy…" : labels[state]}</p>
+        {state === "thinking" && <><p className="voice-stage-hint">{pendingReply ? "Réponse reçue · préparation de la voix…" : "Connexion au service IA · tu peux annuler ci-dessous."}</p>{pendingReply && <div className="voice-captions" aria-label="Réponse en cours">{pendingReply}</div>}<button type="button" className="voice-send-turn" onClick={onPause}>Annuler l’attente</button></>}
         {state === "listening" && <p className="voice-stage-hint">À toi de parler, je suis là.</p>}
         {transcript && <p className="voice-transcript" aria-label="Ta parole transcrite">{transcript}</p>}
         {state === "listening" && transcript && <button type="button" className="voice-send-turn" onClick={onSendTurn}>Envoyer maintenant</button>}

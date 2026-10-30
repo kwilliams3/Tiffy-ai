@@ -16,13 +16,14 @@ export class VoiceConversation {
   private listeners = new Set<() => void>();
   private generation = 0;
   private silence: ReturnType<typeof setTimeout> | undefined;
+  private replyDeadline: ReturnType<typeof setTimeout> | undefined;
   private ports: Ports;
   constructor(ports: Ports) { this.ports = ports; }
   getSnapshot = () => this.state;
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
   private publish(state: DiscussionState) { this.state = state; this.listeners.forEach(fn => fn()); }
   stop = () => {
-    this.generation++; clearTimeout(this.silence);
+    this.generation++; clearTimeout(this.silence); clearTimeout(this.replyDeadline);
     this.publish("off"); this.ports.voice.abort(); this.ports.cancel();
   };
   start = () => { this.stop(); this.listen(this.generation); };
@@ -49,9 +50,14 @@ export class VoiceConversation {
   }
   private async reply(text: string, generation: number) {
     this.publish("thinking");
+    const deadline = setTimeout(() => {
+      if (generation === this.generation) this.fail("Tiffy met trop de temps à répondre. Vérifie ta connexion et réessaie.");
+    }, 50_000);
+    this.replyDeadline = deadline;
     try {
       const reply = await this.ports.ask(text);
       if (generation !== this.generation) return;
+      clearTimeout(deadline);
       if (!reply?.content) { this.fail("La réponse n’a pas abouti. Tu peux relancer la discussion."); return; }
       this.publish("speaking");
       const accepted = this.ports.speak(reply.id, reply.content,
@@ -59,5 +65,6 @@ export class VoiceConversation {
         () => { if (generation === this.generation) this.listen(generation); });
       if (!accepted && generation === this.generation) this.fail("La lecture vocale est indisponible dans ce navigateur.");
     } catch (error) { if (generation === this.generation) this.fail(error instanceof Error ? error.message : "La discussion a été interrompue. Réessaie."); }
+    finally { clearTimeout(deadline); }
   }
 }

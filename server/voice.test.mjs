@@ -55,6 +55,30 @@ test("pausing discussion cancels the turn and resumes with a fresh microphone se
   h.discussion.start(); assert.equal(h.discussion.getSnapshot(), "listening");
   h.discussion.stop(); assert.equal(h.discussion.getSnapshot(), "off");
 });
+
+test("a stalled voice request times out, cancels the request and ignores a late reply", async context => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  let resolve;
+  const h = discussionHarness(() => new Promise(r => { resolve = r; }));
+  h.discussion.start(); h.text("Bonjour"); h.end();
+  assert.equal(h.discussion.getSnapshot(), "thinking");
+  context.mock.timers.tick(50_000);
+  assert.equal(h.discussion.getSnapshot(), "paused");
+  assert.match(h.errors[0], /trop de temps/);
+  assert.equal(h.events.at(-1), "cancel");
+  resolve({ id: "late", content: "Bonjour" }); await Promise.resolve(); await Promise.resolve();
+  assert.equal(h.events.includes("speak"), false);
+  h.discussion.stop();
+});
+
+test("a completed voice reply clears its generation deadline", async context => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = discussionHarness(); h.discussion.start(); h.text("Bonjour"); h.end();
+  await Promise.resolve(); await Promise.resolve();
+  context.mock.timers.tick(50_000);
+  assert.equal(h.discussion.getSnapshot(), "speaking"); assert.deepEqual(h.errors, []);
+  h.discussion.stop();
+});
 import { SpeechPlayback, speechChunks, speechText } from "../src/lib/speech-playback.ts";
 import { loadAutoSpeak, saveAutoSpeak, loadBanterMode, saveBanterMode } from "../src/lib/chat-preferences.ts";
 
