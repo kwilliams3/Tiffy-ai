@@ -1,5 +1,36 @@
 # Tiffy sur Android et iOS
 
+## Mises à jour des installations Android
+
+Les nouvelles versions vérifient les GitHub Releases au lancement. Une bannière
+propose l’APK lorsqu’un code de version supérieur est publié. Les paramètres
+contiennent aussi « Vérifier les mises à jour ». Le téléchargement s’ouvre dans
+le navigateur du téléphone ; Android demande ensuite la confirmation de l’installation.
+Ce mécanisme ne réalise aucune installation silencieuse et ne concerne pas iOS.
+
+La première migration depuis les anciens APK de test peut nécessiter une
+désinstallation, car leurs clés de signature étaient temporaires. Exporter les
+conversations avant cette migration ; les importer n’est pas encore pris en charge.
+Les versions signées avec la nouvelle clé fixe peuvent ensuite se mettre à jour
+sans désinstaller et conservent le stockage local.
+
+Configuration initiale, une seule fois :
+
+1. `npm run mobile:signing` crée la clé privée dans `.android-signing.local`, exclu de Git.
+   Si elle existe déjà, le script ne la remplace pas. Sauvegarder ce dossier en privé.
+2. Dans GitHub, dépôt **Tiffy-ai**, **Settings → Secrets and variables → Actions**,
+   créer le secret **ANDROID_SIGNING_BUNDLE** avec le contenu exact du fichier
+   `.android-signing.local/github-secret.json`. Ne pas le coller dans une discussion
+   et ne jamais committer ce fichier ou une clé privée.
+3. Envoyer le code et lancer le workflow Android. Il restaure cette clé, génère un
+   `versionCode` croissant à partir du numéro d’exécution et compile un APK release.
+4. La GitHub Release publique `android-<versionCode>` contient **Tiffy.apk** et sa
+   somme SHA-256. L’application ne propose que cet APK de ce dépôt exact.
+
+L’activation exige l’enregistrement du secret. Tant qu’il manque, la compilation
+s’arrête avec une erreur explicite plutôt que de distribuer un APK signé avec une
+autre clé. Ne jamais régénérer la clé pour une simple mise à jour.
+
 Le projet Capacitor est isolé dans `mobile/` pour que le site web garde ses
 dépendances actuelles. Les fichiers de l’interface sont embarqués dans l’application,
 sans charger le site distant dans une fenêtre. Seules les requêtes IA contactent
@@ -24,8 +55,8 @@ avec le wrapper Gradle du dossier `mobile/android`. Cet APK utilise une signatur
 de développement ; il ne constitue pas une version de publication Play Store.
 
 Une autre possibilité, après envoi du code sur GitHub : onglet **Actions**,
-workflow **Android APK de test**, **Run workflow**. Si la compilation réussit,
-télécharger l’artefact `tiffy-android-debug`, le décompresser et installer l’APK.
+workflow **Android APK et mises à jour**, **Run workflow**. Si la compilation réussit,
+télécharger `Tiffy.apk` dans les Releases, ou l’artefact `tiffy-android-signed`.
 Le workflow ne publie rien sur un store et ne nécessite pas la clé Gemini.
 
 ## iOS

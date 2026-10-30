@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:api": "node --test server/chat.test.mjs server/chat-features.test.mjs server/voice.test.mjs server/mobile.test.mjs",
+    "test:api": "node --test server/chat.test.mjs server/chat-features.test.mjs server/voice.test.mjs server/mobile.test.mjs server/app-updates.test.mjs",
     "dev:front": "vite",
     "dev:back": "node --watch server/index.ts",
     "build:mobile": "vite build --mode mobile",
@@ -19,7 +19,8 @@
     "mobile:ios": "node scripts/mobile.mjs ios",
     "mobile:open:android": "node scripts/mobile.mjs android --open",
     "mobile:open:ios": "node scripts/mobile.mjs ios --open",
-    "check:mobile": "tsc -p tsconfig.mobile.json"
+    "check:mobile": "tsc -p tsconfig.mobile.json",
+    "mobile:signing": "node scripts/prepare-android-signing.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

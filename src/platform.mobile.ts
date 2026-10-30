@@ -1,4 +1,5 @@
-import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
+import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
+import { configureAppUpdates, type AndroidVersion } from "./lib/app-updates";
 import { SpeechRecognition } from "@capgo/capacitor-speech-recognition";
 import { TextToSpeech } from "@capacitor-community/text-to-speech";
 import { configureNativeRecognition, type Recognizer } from "./lib/voice-input";
@@ -58,6 +59,10 @@ class NativeRecognizer implements Recognizer {
 export async function initializePlatform() {
   if (!Capacitor.isNativePlatform()) return;
   document.documentElement.classList.add("native-mobile");
+  if (Capacitor.getPlatform() === "android") {
+    const updates = registerPlugin<{ version(): Promise<AndroidVersion>; open(options: { url: string }): Promise<void> }>("TiffyUpdates");
+    configureAppUpdates({ version: () => updates.version(), open: url => updates.open({ url }) });
+  }
   const resize = () => document.documentElement.style.setProperty("--app-height", `${window.visualViewport?.height || window.innerHeight}px`);
   window.visualViewport?.addEventListener("resize", resize); resize();
   configureNativeRecognition(NativeRecognizer);

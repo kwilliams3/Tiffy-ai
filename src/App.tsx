@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import { AppUpdateNotice } from "./components/AppUpdates";
 
 const queryClient = new QueryClient();
 
@@ -16,6 +17,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <AppUpdateNotice />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />

@@ -12,7 +12,8 @@ function harness(permission = "granted") {
     start: async options => calls.push(["mic", options]), stop: async () => calls.push(["stop-mic"]),
   };
   const modules = {
-    "@capacitor/core": { Capacitor: { isNativePlatform: () => true } },
+    "@capacitor/core": { Capacitor: { isNativePlatform: () => true, getPlatform: () => "android" }, registerPlugin: () => ({ version: async () => ({ code: 1, name: "1.0" }), open: async () => {} }) },
+    "./lib/app-updates": { configureAppUpdates: value => { installed.updates = value; } },
     "@capgo/capacitor-speech-recognition": { SpeechRecognition: recognition },
     "@capacitor-community/text-to-speech": { TextToSpeech: { speak: async options => calls.push(["speech", options]), stop: async () => calls.push(["stop-speech"]) } },
     "./lib/voice-input": { configureNativeRecognition: value => { installed.Recognition = value; } },
