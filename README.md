@@ -96,6 +96,12 @@ npm run build
 Les tests API utilisent des réponses Gemini simulées et ne nécessitent aucune clé.
 # Discussion vocale
 
+Le bouton unique ouvre l’écran vocal. La transcription s’affiche pendant la parole ;
+« Envoyer maintenant » permet de terminer le tour sans attendre le silence.
+Une erreur de microphone, de réseau ou de réponse reste visible dans cet écran,
+en pause, avec la possibilité de réessayer. La reconnaissance fonctionne par
+énoncés pour mieux prendre en charge les navigateurs mobiles.
+
 Le bouton « Discussion vocale » active un échange mains libres : parole transcrite,
 envoi automatique après environ 1,4 seconde de silence, réponse de Tiffy puis
 lecture vocale, et réouverture du micro. « Quitter la discussion » arrête le micro,

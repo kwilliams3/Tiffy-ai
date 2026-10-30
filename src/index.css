@@ -281,3 +281,11 @@
 @keyframes voice-cloud { from { transform: translate(-8%, 8%) rotate(-18deg); } to { transform: translate(12%, -10%) rotate(18deg); } }
 @media (min-width: 768px) { .voice-screen-layout { padding: 32px 48px 40px; } }
 @media (prefers-reduced-motion: reduce) { .voice-orb, .voice-orb-cloud, .voice-orb-light { animation: none !important; } .voice-round { transition: none; } }
+.discussion-launch { display: inline-flex; align-items: center; justify-content: center; gap: .6rem; width: 100%; padding: .85rem 1rem; border-radius: 14px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: .875rem; font-weight: 600; cursor: pointer; }
+.discussion-launch:hover { opacity: .9; }
+.discussion-launch:disabled { opacity: .5; cursor: not-allowed; }
+.discussion-launch:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
+.voice-transcript { max-width: 480px; max-height: 100px; overflow: auto; margin: 16px 0 0; color: #b7cfff; text-align: center; font-size: 14px; line-height: 1.6; }
+.voice-screen-error { max-width: 440px; margin-top: 18px; padding: 16px; background: #342021; border: 1px solid #714144; border-radius: 16px; color: #ffd6d6; text-align: center; font-size: 14px; line-height: 1.6; }
+.voice-screen-error button { margin-top: 12px; padding: 8px 16px; background: #fff; border-radius: 20px; color: #222; }
+.voice-send-turn { margin-top: 12px; padding: 8px 18px; border: 1px solid #526ba4; border-radius: 24px; background: #172442; color: #dce7ff; font-size: 13px; }

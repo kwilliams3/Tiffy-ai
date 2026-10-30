@@ -41,10 +41,10 @@ test("stopping discussion ignores late model replies and speech callbacks", asyn
 });
 test("discussion stops on microphone and model failures without restarting", async () => {
   const h = discussionHarness(); h.discussion.start(); h.fail();
-  assert.equal(h.discussion.getSnapshot(), "off"); assert.equal(h.errors.length, 1);
+  assert.equal(h.discussion.getSnapshot(), "paused"); assert.equal(h.errors.length, 1);
   const failed = discussionHarness(async () => undefined);
   failed.discussion.start(); failed.text("Bonjour"); failed.end(); await Promise.resolve(); await Promise.resolve();
-  assert.equal(failed.discussion.getSnapshot(), "off"); assert.equal(failed.errors.length, 1);
+  assert.equal(failed.discussion.getSnapshot(), "paused"); assert.equal(failed.errors.length, 1);
 });
 
 test("pausing discussion cancels the turn and resumes with a fresh microphone session", async () => {
@@ -63,6 +63,33 @@ function recognizer() {
     started: 0, stopped: 0, aborted: 0,
     start() { this.started++; }, stop() { this.stopped++; }, abort() { this.aborted++; } };
 }
+
+test("real voice adapter ends a single speech turn, sends once and reports the transcript", async () => {
+  const recognition = recognizer(), spoken = [], sent = [], transcripts = [], errors = [];
+  const voice = new VoiceInput(() => recognition);
+  recognition.stop = function () { this.stopped++; this.onend?.(); };
+  const discussion = new VoiceConversation({ voice,
+    ask: async text => { sent.push(text); return { id: "response", content: "Salut !" }; },
+    speak: (id, text) => { spoken.push(text); return true; }, cancel() {},
+    error: text => errors.push(text), transcript: text => transcripts.push(text) });
+  discussion.start();
+  assert.equal(recognition.continuous, false);
+  recognition.onresult(results("Bonjour Tiffy"));
+  assert.equal(transcripts.at(-1), "Bonjour Tiffy");
+  discussion.sendTurn(); discussion.sendTurn();
+  await Promise.resolve(); await Promise.resolve();
+  assert.deepEqual(sent, ["Bonjour Tiffy"]); assert.deepEqual(spoken, ["Salut !"]);
+  assert.deepEqual(errors, []); discussion.stop();
+});
+
+test("recognition denial keeps discussion open and retryable instead of hiding its error", () => {
+  const recognition = recognizer(), errors = [];
+  const discussion = new VoiceConversation({ voice: new VoiceInput(() => recognition), ask: assert.fail,
+    speak: assert.fail, cancel() {}, error: text => errors.push(text) });
+  discussion.start(); recognition.onerror({ error: "not-allowed" });
+  assert.equal(discussion.getSnapshot(), "paused"); assert.match(errors[0], /Autorise le microphone/);
+  discussion.start(); assert.equal(discussion.getSnapshot(), "listening"); discussion.stop();
+});
 function results(...texts) { return { results: texts.map(transcript => ({ 0: { transcript } })) }; }
 
 test("dictation starts only on request and keeps final results while stopping", () => {

@@ -25,14 +25,14 @@ export class VoiceInput {
   private timer: ReturnType<typeof setTimeout> | undefined;
   constructor(privateFactory: () => Recognizer | undefined = () => { const Constructor = recognitionConstructor(); return Constructor ? new Constructor() : undefined; }) { this.factory = privateFactory; }
   private factory: () => Recognizer | undefined;
-  start(onText: (text: string) => void, onError: (message: string) => void, onListening: (listening: boolean) => void) {
+  start(onText: (text: string) => void, onError: (message: string) => void, onListening: (listening: boolean) => void, options: { continuous?: boolean } = {}) {
     if (this.active) return;
     let recognition: Recognizer | undefined;
     try { recognition = this.factory(); } catch { onError("Impossible d’ouvrir le microphone."); return; }
     if (!recognition) { onError("La dictée vocale n’est pas disponible dans ce navigateur."); return; }
     const session = { recognition, end: () => onListening(false), stopping: false };
     this.active = session;
-    recognition.lang = "fr-FR"; recognition.continuous = true; recognition.interimResults = true;
+    recognition.lang = "fr-FR"; recognition.continuous = options.continuous ?? true; recognition.interimResults = true;
     recognition.onresult = event => {
       if (this.active !== session) return;
       onText(Array.from(event.results, result => result[0]?.transcript || "").join(" ").trim());

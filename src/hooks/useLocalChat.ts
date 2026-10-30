@@ -3,12 +3,14 @@ import { VoiceConversation } from "@/lib/voice-conversation";
 import { voiceInput } from "@/lib/voice-input";
 import { ChatStore } from "@/lib/chat-store";
 import { loadReplyPreferences, loadAutoSpeak } from "@/lib/chat-preferences";
-import { speechPlayback } from "@/lib/speech-playback";
+import { speechPlayback, supportsSpeech } from "@/lib/speech-playback";
 import { toast } from "sonner";
 import { browserReplyAlerts, deliverReplyAlerts, prepareReplySound } from "@/lib/response-alerts";
 export type { Message, Conversation } from "@/lib/chat-store";
 
 export function useLocalChat() {
+  const [discussionError, setDiscussionError] = useState("");
+  const [discussionTranscript, setDiscussionTranscript] = useState("");
   const discussionRef = useRef<VoiceConversation | null>(null);
   const [store] = useState(() => {
     let storage: Storage | undefined;
@@ -28,11 +30,13 @@ export function useLocalChat() {
       await store.sendMessage(text);
       const snapshot = store.getSnapshot();
       const reply = snapshot.conversations.find(c => c.id === snapshot.currentConversationId)?.messages.at(-1);
+      if (reply?.status === "error") throw new Error(reply.error || "Impossible d’obtenir une réponse.");
       return reply?.role === "assistant" && reply.status === "complete" ? reply : undefined;
     },
     speak: (id, text, fail, done) => speechPlayback.play(id, text, fail, done),
     cancel: () => { speechPlayback.stop(); store.stopResponse(); },
-    error: message => toast.info(message),
+    error: setDiscussionError,
+    transcript: setDiscussionTranscript,
   }));
   discussionRef.current = discussion;
   const discussionState = useSyncExternalStore(discussion.subscribe, discussion.getSnapshot);
@@ -51,11 +55,20 @@ export function useLocalChat() {
     try { if (loadReplyPreferences(window.localStorage).sounds) void prepareReplySound(); } catch { /* Chat works without audio. */ }
   };
   const current = state.conversations.find(c => c.id === state.currentConversationId);
+  const startDiscussion = () => {
+    setDiscussionError(""); setDiscussionTranscript("");
+    if (!supportsSpeech()) {
+      discussion.pause(); setDiscussionError("La lecture vocale est indisponible dans ce navigateur. Essaie Chrome ou Safari à jour."); return;
+    }
+    speechPlayback.prepare(); discussion.start();
+  };
   return {
     discussionState,
+    discussionError, discussionTranscript,
     pauseDiscussion: discussion.pause,
-    resumeDiscussion: discussion.start,
-    toggleDiscussion: () => { if (discussion.getSnapshot() !== "off") discussion.stop(); else { speechPlayback.prepare(); discussion.start(); } },
+    sendDiscussionTurn: discussion.sendTurn,
+    resumeDiscussion: startDiscussion,
+    toggleDiscussion: () => { if (discussion.getSnapshot() !== "off") discussion.stop(); else startDiscussion(); },
     ...state, messages: current?.messages || [], isLoading: !!state.activeMessageId, isLoadingConversations: false,
     sendMessage: (content: string) => { discussion.stop(); speechPlayback.stop(); speechPlayback.prepare(); unlockSound(); return store.sendMessage(content); },
     retryMessage: (id: string) => { discussion.stop(); speechPlayback.stop(); speechPlayback.prepare(); unlockSound(); return store.retryMessage(id); },

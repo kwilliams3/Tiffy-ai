@@ -7,6 +7,7 @@ interface Ports {
   speak: (id: string, text: string, fail: () => void, done: () => void) => boolean;
   cancel: () => void;
   error: (message: string) => void;
+  transcript?: (text: string) => void;
 }
 
 // One microphone turn, one model reply, one spoken reply. Never listen to our own voice.
@@ -26,21 +27,25 @@ export class VoiceConversation {
   };
   start = () => { this.stop(); this.listen(this.generation); };
   pause = () => { this.stop(); this.publish("paused"); };
-  private fail(message: string) { this.stop(); this.ports.error(message); }
+  sendTurn = () => { if (this.state === "listening") this.ports.voice.stop(); };
+  private fail(message: string) { this.pause(); this.ports.error(message); }
   private listen(generation: number) {
     if (generation !== this.generation) return;
     let transcript = "";
+    this.ports.transcript?.("");
     this.publish("listening");
     this.ports.voice.start(text => {
+      if (generation !== this.generation) return;
       transcript = text;
+      this.ports.transcript?.(text);
       clearTimeout(this.silence);
       if (text.trim()) this.silence = setTimeout(() => this.ports.voice.stop(), 1400);
     }, message => this.fail(message), listening => {
-      if (listening || generation !== this.generation) return;
+      if (listening || generation !== this.generation || this.state !== "listening") return;
       clearTimeout(this.silence);
       if (!transcript.trim()) { this.fail("Aucune parole détectée. Relance le mode discussion pour réessayer."); return; }
       void this.reply(transcript.slice(0, 12000), generation);
-    });
+    }, { continuous: false });
   }
   private async reply(text: string, generation: number) {
     this.publish("thinking");
@@ -53,6 +58,6 @@ export class VoiceConversation {
         () => { if (generation === this.generation) this.fail("Lecture vocale interrompue. Relance la discussion."); },
         () => { if (generation === this.generation) this.listen(generation); });
       if (!accepted && generation === this.generation) this.fail("La lecture vocale est indisponible dans ce navigateur.");
-    } catch { if (generation === this.generation) this.fail("La discussion a été interrompue. Réessaie."); }
+    } catch (error) { if (generation === this.generation) this.fail(error instanceof Error ? error.message : "La discussion a été interrompue. Réessaie."); }
   }
 }
