@@ -29,6 +29,16 @@ export class VoiceConversation {
   start = () => { this.stop(); this.listen(this.generation); };
   pause = () => { this.stop(); this.publish("paused"); };
   sendTurn = () => { if (this.state === "listening") this.ports.voice.stop(); };
+  replay = (reply: { id: string; content: string }) => {
+    this.stop(); this.speakReply(reply, this.generation);
+  };
+  private speakReply(reply: { id: string; content: string }, generation: number) {
+    this.publish("speaking");
+    const accepted = this.ports.speak(reply.id, reply.content,
+      () => { if (generation === this.generation) this.fail("La voix n’a pas démarré ou a été interrompue. Appuie sur « Écouter la réponse » pour relancer le son, et vérifie le volume de ton appareil."); },
+      () => { if (generation === this.generation) this.listen(generation); });
+    if (!accepted && generation === this.generation) this.fail("La lecture vocale est indisponible dans ce navigateur.");
+  }
   private fail(message: string) { this.pause(); this.ports.error(message); }
   private listen(generation: number) {
     if (generation !== this.generation) return;
@@ -59,11 +69,7 @@ export class VoiceConversation {
       if (generation !== this.generation) return;
       clearTimeout(deadline);
       if (!reply?.content) { this.fail("La réponse n’a pas abouti. Tu peux relancer la discussion."); return; }
-      this.publish("speaking");
-      const accepted = this.ports.speak(reply.id, reply.content,
-        () => { if (generation === this.generation) this.fail("Lecture vocale interrompue. Relance la discussion."); },
-        () => { if (generation === this.generation) this.listen(generation); });
-      if (!accepted && generation === this.generation) this.fail("La lecture vocale est indisponible dans ce navigateur.");
+      this.speakReply(reply, generation);
     } catch (error) { if (generation === this.generation) this.fail(error instanceof Error ? error.message : "La discussion a été interrompue. Réessaie."); }
     finally { clearTimeout(deadline); }
   }

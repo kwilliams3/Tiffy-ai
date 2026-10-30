@@ -65,6 +65,10 @@ export function useLocalChat() {
   return {
     discussionState,
     discussionError, discussionTranscript,
+    replayDiscussion: () => {
+      const reply = current?.messages.filter(message => message.role === "assistant" && message.status === "complete").at(-1);
+      if (reply) { setDiscussionError(""); speechPlayback.prepare(); discussion.replay(reply); }
+    },
     pauseDiscussion: discussion.pause,
     sendDiscussionTurn: discussion.sendTurn,
     resumeDiscussion: startDiscussion,

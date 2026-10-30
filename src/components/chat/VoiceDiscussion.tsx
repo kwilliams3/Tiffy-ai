@@ -8,6 +8,7 @@ interface Props {
   onPause: () => void;
   onResume: () => void;
   onSendTurn: () => void;
+  onReplay: () => void;
   reply?: string;
   error?: string;
   transcript?: string;
@@ -17,7 +18,7 @@ const labels: Record<DiscussionState, string> = {
   off: "", paused: "Micro en pause", listening: "Je t’écoute", thinking: "Un instant…", speaking: "Tiffy te répond",
 };
 
-export function VoiceDiscussion({ state, onClose, onPause, onResume, onSendTurn, reply, error, transcript, pendingReply }: Props) {
+export function VoiceDiscussion({ state, onClose, onPause, onResume, onSendTurn, onReplay, reply, error, transcript, pendingReply }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [captions, setCaptions] = useState(false);
   const [help, setHelp] = useState(false);
@@ -51,6 +52,7 @@ export function VoiceDiscussion({ state, onClose, onPause, onResume, onSendTurn,
         {transcript && <p className="voice-transcript" aria-label="Ta parole transcrite">{transcript}</p>}
         {state === "listening" && transcript && <button type="button" className="voice-send-turn" onClick={onSendTurn}>Envoyer maintenant</button>}
         {error && <div className="voice-screen-error" role="alert"><p>{error}</p><button type="button" onClick={onResume}>Réessayer le microphone</button></div>}
+        {(state === "paused" || state === "speaking") && reply && <button type="button" className="voice-send-turn" onClick={onReplay}>Écouter la réponse</button>}
         {captions && reply && <div className="voice-captions" aria-label="Dernière réponse de Tiffy">{reply}</div>}
       </div>
       <footer className="voice-screen-footer">

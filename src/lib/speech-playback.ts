@@ -28,12 +28,15 @@ export class SpeechPlayback {
   private activeId: string | null = null;
   private listeners = new Set<() => void>();
   private version = 0;
+  private utterance: SpeechSynthesisUtterance | null = null;
+  private watchdog: ReturnType<typeof setTimeout> | undefined;
   private factory: () => SpeechPlatform | undefined;
   constructor(factory: () => SpeechPlatform | undefined = browserPlatform) { this.factory = factory; }
   getSnapshot = () => this.activeId;
   subscribe = (callback: () => void) => { this.listeners.add(callback); return () => { this.listeners.delete(callback); }; };
   private publish(id: string | null) { this.activeId = id; this.listeners.forEach(callback => callback()); }
   stop = () => {
+    clearTimeout(this.watchdog); this.utterance = null;
     this.version++; this.publish(null);
     try { this.factory()?.synth.cancel(); } catch { /* No speech engine available. */ }
   };
@@ -50,13 +53,23 @@ export class SpeechPlayback {
     const fail = () => { if (version !== this.version) return; this.stop(); onError?.(); };
     const next = () => {
       if (version !== this.version) return;
-      if (index >= chunks.length) { this.publish(null); onDone?.(); return; }
+      clearTimeout(this.watchdog);
+      if (index >= chunks.length) { this.utterance = null; this.publish(null); onDone?.(); return; }
       try {
         const utterance = new platform.Utterance(chunks[index++]);
+        this.utterance = utterance;
         utterance.lang = "fr-FR"; utterance.rate = 1; utterance.pitch = 1;
+        utterance.volume = 1;
         const voice = platform.synth.getVoices().find(voice => voice.lang.toLowerCase().startsWith("fr"));
         if (voice) utterance.voice = voice;
         utterance.onend = next; utterance.onerror = fail;
+        // Some engines silently queue speech when autoplay is blocked.
+        this.watchdog = setTimeout(fail, 10_000);
+        utterance.onstart = () => {
+          if (version !== this.version) return;
+          clearTimeout(this.watchdog);
+          this.watchdog = setTimeout(fail, Math.max(30_000, utterance.text.length * 180));
+        };
         platform.synth.speak(utterance);
       } catch { fail(); }
     };

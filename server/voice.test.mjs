@@ -219,6 +219,29 @@ test("speech errors release controls and unsupported browsers fail gracefully", 
   assert.equal(player.getSnapshot(), null);
 });
 
+test("silent speech-engine failure is detected and can be replayed from a click", context => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  const fake = speechPlatform(), errors = [];
+  const player = new SpeechPlayback(() => fake.platform);
+  player.play("id", "Bonjour", () => errors.push("blocked"));
+  context.mock.timers.tick(10_000);
+  assert.deepEqual(errors, ["blocked"]); assert.equal(player.getSnapshot(), null);
+  player.play("id", "Bonjour");
+  fake.utterances.at(-1).onstart();
+  context.mock.timers.tick(10_000);
+  assert.equal(player.getSnapshot(), "id");
+  fake.utterances.at(-1).onend();
+  assert.equal(player.getSnapshot(), null);
+});
+
+test("replaying a completed voice reply does not submit a new model request", () => {
+  const h = discussionHarness();
+  h.discussion.replay({ id: "reply", content: "Bonjour" });
+  assert.equal(h.discussion.getSnapshot(), "speaking");
+  assert.deepEqual(h.events, ["abort", "cancel", "speak"]);
+  h.done(); assert.equal(h.discussion.getSnapshot(), "listening"); h.discussion.stop();
+});
+
 test("automatic spoken replies are opt-in and preserve other preferences", () => {
   let value = "{}";
   const storage = { getItem: () => value, setItem: (_key, text) => { value = text; } };
