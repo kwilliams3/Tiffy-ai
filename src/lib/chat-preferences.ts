@@ -1,5 +1,9 @@
 type PreferenceStorage = Pick<Storage, "getItem" | "setItem">;
 const key = "tiffy_preferences";
+export function loadWebSearch(storage?: PreferenceStorage): boolean {
+  try { return JSON.parse(storage?.getItem(key) || "{}")?.webSearch === true; } catch { return false; }
+}
+export function saveWebSearch(storage: PreferenceStorage, enabled: boolean) { savePreference(storage, "webSearch", enabled); }
 
 export function loadBanterMode(storage?: PreferenceStorage): boolean {
   try {

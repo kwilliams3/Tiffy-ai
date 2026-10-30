@@ -6,6 +6,7 @@ import { handleChat } from "./chat.mjs";
 import vercelHandler from "../api/chat.mjs";
 import { getChatError } from "../src/lib/chat-errors.ts";
 import { chatApiUrl } from "../src/lib/api-url.ts";
+import { needsWebSearch, groundedReply } from "./web-search.mjs";
 import { createRateLimiter, clientAddress } from "./rate-limit.mjs";
 
 async function withServer(options, callback) {
@@ -23,6 +24,46 @@ test("mobile API URL uses HTTPS and web requests remain same-origin", () => {
   assert.equal(chatApiUrl(""), "/api/chat");
   assert.equal(chatApiUrl("https://spark-my-ai.vercel.app"), "https://spark-my-ai.vercel.app/api/chat");
   for (const url of ["http://example.com", "https://user:pass@example.com", "https://example.com/path", "https://example.com?token=x"]) assert.throws(() => chatApiUrl(url));
+});
+
+test("recent questions trigger web search while ordinary chat stays unchanged", () => {
+  assert.equal(needsWebSearch([{ role: "user", content: "Bonjour" }]), false);
+  assert.equal(needsWebSearch([{ role: "user", content: "Les actualités aujourd’hui ?" }]), true);
+  assert.equal(needsWebSearch([{ role: "user", content: "Bonjour" }], true), true);
+  assert.equal(needsWebSearch([{ role: "user", content: "Actualités" }, { role: "assistant", content: "..." }, { role: "user", content: "Merci" }]), false);
+});
+
+test("grounding keeps real HTTPS sources, removes duplicates and flags missing verification", () => {
+  const data = { candidates: [{ content: { parts: [{ text: "Réponse vérifiée." }, { thought: true, text: "Ne pas afficher" }] }, groundingMetadata: { groundingChunks: [{ web: { title: "NASA", uri: "https://www.nasa.gov/news/" } }, { web: { title: "Dupliqué", uri: "https://www.nasa.gov/news/" } }, { web: { title: "Invalide", uri: "javascript:alert(1)" } }], searchEntryPoint: { renderedContent: "<div>Recherche Google</div>" } } }] };
+  const reply = groundedReply(data, new Date("2026-10-30T12:00:00Z"));
+  assert.equal(reply.verified, true); assert.match(reply.text, /2026-10-30/);
+  assert.equal(reply.text.includes("Ne pas afficher"), false);
+  assert.equal(reply.text.includes("javascript:"), false);
+  assert.equal(reply.text.split("https://www.nasa.gov/news/").length - 1, 1);
+  assert.equal(groundedReply({ candidates: [{ content: { parts: [{ text: "Réponse" }] } }] }).verified, false);
+});
+
+test("web search uses Google grounding and returns sources through the chat stream", async () => {
+  await withServer({ apiKey: "test", fetchImpl: async (url, options) => {
+    assert.match(url, /:generateContent$/);
+    const body = JSON.parse(options.body); assert.deepEqual(body.tools, [{ google_search: {} }]);
+    assert.match(body.systemInstruction.parts[0].text, /Date et heure actuelles/);
+    return Response.json({ candidates: [{ content: { parts: [{ text: "Voici les nouvelles." }] }, groundingMetadata: { groundingChunks: [{ web: { title: "NASA", uri: "https://www.nasa.gov/news/" } }], searchEntryPoint: { renderedContent: "<div>Google</div>" } } }] });
+  } }, async url => {
+    const response = await post(url, { messages: [{ role: "user", content: "Recherche les actualités de la NASA" }] });
+    assert.equal(response.status, 200); const text = await response.text();
+    assert.match(text, /Sources consultées/); assert.match(text, /grounding/); assert.match(text, /\[DONE\]/);
+  });
+});
+
+test("web quota failure is explicit and never falls back to an unverified current answer", async () => {
+  let calls = 0;
+  await withServer({ apiKey: "test", fetchImpl: async () => { calls++; return Response.json({ error: {} }, { status: 429 }); } }, async url => {
+    const response = await post(url, { messages: [{ role: "user", content: "Météo aujourd’hui ?" }] });
+    assert.equal(response.status, 429); assert.match((await response.json()).error, /recherche web/); assert.equal(calls, 1);
+    const invalid = await post(url, { webSearch: "yes", messages: [{ role: "user", content: "Bonjour" }] });
+    assert.equal(invalid.status, 400);
+  });
 });
 
 test("only native localhost origins get CORS preflight and response headers", async () => {

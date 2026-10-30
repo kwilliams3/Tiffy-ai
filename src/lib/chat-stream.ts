@@ -1,6 +1,6 @@
 import { getChatError } from "./chat-errors.ts";
 
-export async function readChatStream(response: Response, onText: (text: string) => void, signal: AbortSignal) {
+export async function readChatStream(response: Response, onText: (text: string) => void, signal: AbortSignal, onGrounding?: (value: { suggestions?: string; verified: boolean }) => void) {
   if (!response.ok) throw new Error(await getChatError(response));
   if (!response.body || !response.headers.get("content-type")?.includes("text/event-stream")) {
     throw new Error("Le serveur n’a pas renvoyé de réponse valide. Réessaie.");
@@ -19,6 +19,7 @@ export async function readChatStream(response: Response, onText: (text: string) 
     try { data = JSON.parse(raw); }
     catch { throw new Error("La réponse reçue est incomplète. Réessaie sans renvoyer ton message."); }
     if (data.error) throw new Error("La réponse a été interrompue par le service IA. Réessaie.");
+    if (data.grounding && typeof data.grounding === "object") onGrounding?.({ suggestions: typeof data.grounding.suggestions === "string" ? data.grounding.suggestions.slice(0, 50_000) : undefined, verified: data.grounding.verified === true });
     const choice = data.choices?.[0];
     if (typeof choice?.delta?.content === "string" && choice.delta.content) {
       receivedText = true;

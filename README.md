@@ -117,3 +117,24 @@ Le projet Android Capacitor est dans `mobile/android`. Les commandes de prépara
 Android/iOS, la compilation de l’APK de test sur GitHub Actions, les prérequis et les
 limites de validation sont décrits dans [mobile/README.md](mobile/README.md).
 
+# Recherche d’informations récentes
+
+Les questions contenant des termes comme actualités, aujourd’hui, météo ou prix
+déclenchent une recherche Google via Gemini. Le bouton globe du compositeur permet
+aussi de demander une recherche pour les prochains messages. Ce réglage fonctionne
+dans le chat et dans la discussion vocale. Chaque requête reçoit l’heure UTC du
+serveur ; elle ne présume pas du fuseau horaire de l’utilisateur.
+
+La recherche utilise uniquement la clé serveur `GEMINI_API_KEY`, avec le modèle
+`gemini-3.1-flash-lite` et l’outil natif `google_search`. Les sources renvoyées par
+Google sont ajoutées à la réponse ; les suggestions Google apparaissent dans un
+cadre isolé sans scripts. Une réponse sans source est explicitement signalée
+comme non vérifiée. Les erreurs ou quotas de recherche restent visibles, sans
+bascule silencieuse vers une réponse prétendument à jour.
+
+L’accès et les tarifs dépendent des quotas et du projet Google. Lors du test local,
+Google a renvoyé HTTP 429 pour la recherche : l’implémentation est prête mais le
+fonctionnement réel dépend de l’accès du compte à cet outil. Aucune facturation
+n’est activée par le code. Ce service consulte le web à la demande ; il ne fournit
+pas un flux continu de données boursières ou sportives en direct.
+

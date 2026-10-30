@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import type { Message } from "@/hooks/useLocalChat";
 import { CodeBlock } from "./CodeBlock";
 import { TypingIndicator } from "./TypingIndicator";
+import { SearchSuggestions } from "./SearchSuggestions";
 import { speechPlayback, supportsSpeech } from "@/lib/speech-playback";
 
 interface Props { message: Message; isBusy: boolean; canRetry: boolean; onRetry: (id: string) => void; onEdit: (id: string, content: string) => void }
@@ -40,6 +41,7 @@ export function ChatMessage({ message, isBusy, canRetry, onRetry, onEdit }: Prop
         }}>{message.content}</ReactMarkdown></div>}</div>}
         {message.status === "error" && <div className="response-error" role="alert"><AlertCircle className="h-4 w-4 shrink-0" /><p>{message.error || "La réponse a été interrompue. Réessaie."}</p></div>}
         {message.status === "stopped" && <div className="response-stopped"><Square className="h-3 w-3" />Réponse arrêtée. {message.content ? "Le texte reçu est conservé." : "Ton message est conservé."}</div>}
+        {!isUser && <SearchSuggestions html={message.searchSuggestions} />}
         <div className={cn("message-actions", isUser && "justify-end")}>
           {isUser ? <button disabled={isBusy} onClick={() => { speechPlayback.stop(); setDraft(message.content); setEditing(true); }}><Pencil className="h-3 w-3" />Modifier</button> : <>
             {message.content && <button onClick={copy} aria-label="Copier la réponse de Tiffy"><Copy className="h-3 w-3" />Copier</button>}

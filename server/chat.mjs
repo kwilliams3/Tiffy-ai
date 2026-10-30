@@ -1,6 +1,7 @@
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createRateLimiter, clientAddress } from "./rate-limit.mjs";
+import { needsWebSearch, requestWebSearch } from "./web-search.mjs";
 
 const limiter = createRateLimiter();
 const MAX_BODY_BYTES = 65_536;
@@ -58,6 +59,7 @@ export async function handleChat(req, res, options = {}) {
     return json(400, "Requête JSON invalide.");
   }
   const messages = body?.messages;
+  if (body?.webSearch !== undefined && typeof body.webSearch !== "boolean") return json(400, "Le réglage de recherche web doit être un booléen.");
   if (body?.banterMode !== undefined && typeof body.banterMode !== "boolean") return json(400, "Le réglage Mode taquin doit être activé ou désactivé.");
   if (!Array.isArray(messages) || messages.length === 0 || messages.some((m) =>
     !m || !["user", "assistant"].includes(m.role) || typeof m.content !== "string" || !m.content.trim()
@@ -78,13 +80,26 @@ export async function handleChat(req, res, options = {}) {
   const onClose = () => controller.abort();
   res.on("close", onClose);
   try {
+    const system = `${systemPrompt}\n\n${body.banterMode === true ? banterPrompt : calmPrompt}\nDate et heure actuelles : ${new Date().toISOString()} (UTC). Ne confonds pas UTC et l’heure locale de l’utilisateur. Pour les faits changeants, n’affirme pas qu’ils sont à jour sans recherche web.`;
+    if (needsWebSearch(messages, body.webSearch === true)) {
+      try {
+        const result = await requestWebSearch({ fetcher: options.fetchImpl ?? fetch, apiKey, messages, system, signal: controller.signal });
+        if (controller.signal.aborted || res.destroyed) return;
+        res.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform" });
+        res.end(`data: ${JSON.stringify({ choices: [{ delta: { content: result.text } }], grounding: { suggestions: result.suggestions, verified: result.verified } })}\n\ndata: [DONE]\n\n`);
+      } catch (error) {
+        if (controller.signal.aborted) throw error;
+        return json(error.status || 502, error.message || "Recherche web indisponible.");
+      }
+      return;
+    }
     const response = await (options.fetchImpl ?? fetch)(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: "gemini-3.1-flash-lite",
         max_tokens: 4096,
-        messages: [{ role: "system", content: `${systemPrompt}\n\n${body.banterMode === true ? banterPrompt : calmPrompt}` }, ...messages.map(({ role, content }) => ({ role, content }))],
+        messages: [{ role: "system", content: system }, ...messages.map(({ role, content }) => ({ role, content }))],
         stream: true,
       }),
       signal: controller.signal,

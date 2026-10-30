@@ -1,6 +1,6 @@
 import { readChatStream } from "./chat-stream.ts";
 import { chatApiUrl } from "./api-url.ts";
-import { loadBanterMode } from "./chat-preferences.ts";
+import { loadBanterMode, loadWebSearch } from "./chat-preferences.ts";
 
 export interface Message {
   id: string;
@@ -8,6 +8,8 @@ export interface Message {
   content: string;
   status?: "streaming" | "complete" | "stopped" | "error";
   error?: string;
+  searchSuggestions?: string;
+  webVerified?: boolean;
 }
 export interface Conversation { id: string; title: string; messages: Message[]; created_at: string; updated_at: string }
 interface Snapshot { conversations: Conversation[]; currentConversationId: string | null; activeMessageId: string | null; banterMode: boolean }
@@ -84,13 +86,13 @@ export class ChatStore {
       const outgoing = prefix.filter(m => m.content.trim()).slice(-40).map((m, index, all) => ({
         ...m, content: index < all.length - 1 ? m.content.slice(0, 12_000) : m.content,
       }));
-      const payload = () => JSON.stringify({ messages: outgoing.map(({ role, content }) => ({ role, content })), banterMode });
+      const payload = () => JSON.stringify({ messages: outgoing.map(({ role, content }) => ({ role, content })), banterMode, webSearch: loadWebSearch(this.storage) });
       while (outgoing.length > 1 && (outgoing[0].role !== "user" || outgoing.reduce((n, m) => n + m.content.length, 0) > 40_000 || new TextEncoder().encode(payload()).length > 60_000)) outgoing.shift();
       const response = await this.fetcher(chatApiUrl(), {
         method: "POST", headers: { "Content-Type": "application/json" }, signal: run.controller.signal,
         body: payload(),
       });
-      await readChatStream(response, text => { content += text; changeMessage({ content }); }, run.controller.signal);
+      await readChatStream(response, text => { content += text; changeMessage({ content }); }, run.controller.signal, grounding => changeMessage({ searchSuggestions: grounding.suggestions, webVerified: grounding.verified }));
       changeMessage({ status: "complete" });
       completed = this.active === run;
     } catch (error) {
